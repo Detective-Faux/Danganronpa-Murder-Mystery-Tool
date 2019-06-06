@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'idea'
+    id 'application'
+}
+
+mainClassName = 'Danganronpa.Main'
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+version = '0.6.0'
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven{
+        url 'http://repository.codehaus.org/'
+    }
+}
+
+ext.logbackVersion = '1.1.8'
+
+dependencies {
+    compile ('net.dv8tion:JDA:3.8.3_463'){
+        exclude module: 'opus-java'
+    }
+    
+    compile 'com.google.api-client:google-api-client:1.23.0'
+    compile 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
+    compile 'com.google.apis:google-api-services-sheets:v4-rev516-1.23.0'
+    
+    compile "com.google.code.gson:gson:2.4"
+    compile "org.xerial:sqlite-jdbc:3.8.11.2"
+    compile "org.pircbotx:pircbotx:2.0.1"
+    compile "commons-io:commons-io:2.4"
+
+    compile group: 'org.apache.poi', name: 'poi', version:"4.1.0"
+    compile 'org.apache.httpcomponents:httpclient:4.5.8'
+
+    runtime "ch.qos.logback:logback-classic:$logbackVersion"
+    runtime "ch.qos.logback:logback-core:$logbackVersion"
+}
+
+sourceSets.main.output.resourcesDir = "build/classes/java/main"
+
+idea {
+    module.outputDir file("out/production/classes")
+}
+
+compileJava.options.encoding = 'UTF-8'
