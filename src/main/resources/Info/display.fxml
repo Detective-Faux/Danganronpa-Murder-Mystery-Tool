@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.ContextMenu?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressBar?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<?scenebuilder-stylesheet style.css?>
+
+<BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="800.0" xmlns="http://javafx.com/javafx/8.0.172-ea" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Danganronpa.Controller">
+   <center>
+       <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+           <MenuBar>
+               <Menu mnemonicParsing="false" text="Help">
+                   <MenuItem mnemonicParsing="false" onAction="#getAbout" text="About" />
+                   <MenuItem mnemonicParsing="false" onAction="#getHelp" text="Help" />
+               <MenuItem fx:id="updateBar" mnemonicParsing="false" text="Check for Updates" />
+               </Menu>
+           </MenuBar>
+           <TabPane tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+              <Tab closable="false" text="Role Select">
+                  <BorderPane prefHeight="200.0" prefWidth="200.0">
+                      <left>
+                          <VBox alignment="CENTER" prefHeight="530.0" prefWidth="180.0" BorderPane.alignment="CENTER">
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                              <TextField fx:id="standardGameField" alignment="CENTER" promptText="# of Players">
+                                  <VBox.margin>
+                                      <Insets bottom="10.0" left="10.0" top="10.0" />
+                                  </VBox.margin>
+                                  <font>
+                                      <Font size="17.0" />
+                                  </font>
+                              </TextField>
+                              <Button mnemonicParsing="false" onMouseClicked="#standardGame" text="GO">
+                                  <opaqueInsets>
+                                      <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                  </opaqueInsets>
+                                  <font>
+                                      <Font size="28.0" />
+                                  </font>
+                              </Button>
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                          </VBox>
+                      </left>
+                      <center>
+                          <TreeView fx:id="roleTree" onContextMenuRequested="#menuRequest" prefHeight="200.0" prefWidth="453.0" showRoot="false" BorderPane.alignment="CENTER">
+                              <BorderPane.margin>
+                                  <Insets bottom="10.0" left="10.0" right="10.0" top="5.0" />
+                              </BorderPane.margin>
+                              <contextMenu>
+                                  <ContextMenu fx:id="editRolesMenu">
+                                      <items>
+                                          <MenuItem fx:id="removeRoleMenuItem" disable="true" mnemonicParsing="false" onAction="#menuRemoveRole" text="Remove Selected" />
+                                          <Menu fx:id="tagMenu" mnemonicParsing="false" text="Give Tag" />
+                                          <Menu fx:id="addRoleMenu" mnemonicParsing="false" text="Add Role" />
+                                      </items>
+                                  </ContextMenu>
+                              </contextMenu>
+                          </TreeView>
+                      </center>
+                      <right>
+                          <VBox fx:id="customGameVBox" alignment="CENTER" prefHeight="530.0" prefWidth="180.0" BorderPane.alignment="CENTER">
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                              <!--Custom Fields added dynamically here...-->
+                              <Button mnemonicParsing="false" onMouseClicked="#customGame" text="Create" textAlignment="CENTER">
+                                  <VBox.margin>
+                                      <Insets bottom="5.0" top="2.0" />
+                                  </VBox.margin>
+                                  <font>
+                                      <Font size="20.0" />
+                                  </font>
+                              </Button>
+                              <Separator layoutX="87.0" layoutY="130.0" opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                          </VBox>
+                      </right>
+                      <top>
+                          <HBox alignment="CENTER" prefHeight="35.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+                              <Label text="Standard Game">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets left="20.0" />
+                                  </HBox.margin>
+                              </Label>
+                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
+                              <Button mnemonicParsing="false" onMouseClicked="#clearRoles" text="⎚">
+                                  <HBox.margin>
+                                      <Insets right="5.0" />
+                                  </HBox.margin>
+                                  <font>
+                                      <Font size="15.0" />
+                                  </font>
+                              </Button>
+                              <ComboBox fx:id="gamemodeBox" promptText="Select Gamemode">
+                                  <HBox.margin>
+                                      <Insets left="5.0" />
+                                  </HBox.margin>
+                              </ComboBox>
+                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
+                              <Label text="Custom Game">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets right="25.0" />
+                                  </HBox.margin>
+                              </Label>
+                          </HBox>
+                      </top>
+                  </BorderPane>
+              </Tab>
+               <Tab closable="false" text="Player Select">
+                   <BorderPane prefHeight="200.0" prefWidth="200.0">
+                      <center>
+                          <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+                              <TreeView fx:id="modsTree" prefHeight="110.0" prefWidth="299.0" showRoot="false">
+                                  <VBox.margin>
+                                      <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                  </VBox.margin>
+                              </TreeView>
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                              <Button mnemonicParsing="false" onMouseClicked="#addModerators" text="↑">
+                                  <VBox.margin>
+                                      <Insets bottom="5.0" />
+                                  </VBox.margin>
+                                  <font>
+                                      <Font size="18.0" />
+                                  </font>
+                              </Button>
+                              <HBox alignment="CENTER">
+                                  <Button mnemonicParsing="false" onMouseClicked="#removeFromPlaying" text="←">
+                                      <font>
+                                          <Font size="18.0" />
+                                      </font>
+                                  </Button>
+                                  <Label text="Build List">
+                                      <font>
+                                          <Font name="System Bold" size="20.0" />
+                                      </font>
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </Label>
+                                  <Button mnemonicParsing="false" onMouseClicked="#pushToPlaying" text="→">
+                                      <font>
+                                          <Font size="18.0" />
+                                      </font>
+                                  </Button>
+                              </HBox>
+                              <Button mnemonicParsing="false" onMouseClicked="#removeMods" text="↵">
+                                  <font>
+                                      <Font size="18.0" />
+                                  </font>
+                                  <VBox.margin>
+                                      <Insets top="5.0" />
+                                  </VBox.margin>
+                              </Button>
+                              <Separator opacity="0.0" orientation="VERTICAL" prefHeight="0.0" prefWidth="21.0" VBox.vgrow="ALWAYS" />
+                              <Label fx:id="statusLabel" text="Status:">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                                  <VBox.margin>
+                                      <Insets />
+                                  </VBox.margin>
+                              </Label>
+                              <ProgressBar fx:id="dmProgress" prefWidth="200.0" progress="0.0" />
+                          </VBox>
+                      </center>
+                      <bottom>
+                          <HBox alignment="CENTER" prefHeight="57.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+                              <Button fx:id="confirmButton" disable="true" mnemonicParsing="false" onMouseClicked="#startGame" text="Send Roles">
+                                  <font>
+                                      <Font size="15.0" />
+                                  </font>
+                              </Button>
+                          </HBox>
+                      </bottom>
+                      <left>
+                          <TreeView fx:id="playerTree" prefHeight="462.0" prefWidth="222.0" showRoot="false" BorderPane.alignment="CENTER">
+                              <BorderPane.margin>
+                                  <Insets bottom="10.0" left="10.0" right="10.0" top="5.0" />
+                              </BorderPane.margin>
+                          </TreeView>
+                      </left>
+                      <right>
+                          <TreeView fx:id="playingTree" prefHeight="462.0" prefWidth="229.0" showRoot="false" BorderPane.alignment="CENTER">
+                              <BorderPane.margin>
+                                  <Insets bottom="10.0" left="10.0" right="10.0" top="5.0" />
+                              </BorderPane.margin>
+                          </TreeView>
+                      </right>
+                      <top>
+                          <HBox alignment="CENTER" prefHeight="37.0" prefWidth="800.0" BorderPane.alignment="CENTER">
+                              <Label text="List of Players">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets left="25.0" />
+                                  </HBox.margin>
+                              </Label>
+                              <Button mnemonicParsing="false" onMouseClicked="#refreshPlayers" text="↺">
+                                  <HBox.margin>
+                                      <Insets left="10.0" />
+                                  </HBox.margin>
+                                  <font>
+                                      <Font size="15.0" />
+                                  </font>
+                              </Button>
+                              <Separator opacity="0.0" prefHeight="12.0" HBox.hgrow="ALWAYS" />
+                              <Label text="Moderators">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                              </Label>
+                              <Separator layoutX="206.0" layoutY="23.0" opacity="0.0" prefHeight="12.0" HBox.hgrow="ALWAYS" />
+                              <Button mnemonicParsing="false" onMouseClicked="#popCreated" text="⎚">
+                                  <HBox.margin>
+                                      <Insets right="10.0" />
+                                  </HBox.margin>
+                                  <font>
+                                      <Font size="15.0" />
+                                  </font>
+                              </Button>
+                              <Label text="Who's Playing">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets right="25.0" />
+                                  </HBox.margin>
+                              </Label>
+                          </HBox>
+                      </top>
+                   </BorderPane>
+               </Tab>
+               <Tab fx:id="scoreUpdaterTab" closable="false" disable="true" text="Score Updater">
+                   <BorderPane prefHeight="200.0" prefWidth="200.0">
+                      <center>
+                          <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
+                              <Label text="Player's Scores">
+                                  <font>
+                                      <Font name="System Bold" size="20.0" />
+                                  </font>
+                              </Label>
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                              <Label text="VRChat Name">
+                                  <font>
+                                      <Font name="System Bold" size="15.0" />
+                                  </font>
+                              </Label>
+                              <HBox alignment="CENTER" layoutX="10.0" layoutY="248.0">
+                                  <TextField fx:id="effectiveNameTextField" alignment="CENTER" promptText="VRChat Name">
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </TextField>
+                              </HBox>
+                              <Label text="Player Stats">
+                                  <font>
+                                      <Font name="System Bold" size="15.0" />
+                                  </font>
+                              </Label>
+                              <HBox alignment="CENTER">
+                                  <TextField fx:id="lossesTextField" alignment="CENTER" promptText="# of Losses">
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </TextField>
+                                  <TextField fx:id="killsTextField" alignment="CENTER" promptText="# of Kills">
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </TextField>
+                                  <TextField fx:id="performanceTextField" alignment="CENTER" promptText="# of Role Use">
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </TextField>
+                                  <TextField fx:id="leftTextField" alignment="CENTER" promptText="# of Games Left">
+                                      <HBox.margin>
+                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                      </HBox.margin>
+                                  </TextField>
+                              </HBox>
+                              <Label text="Player Wins">
+                                  <font>
+                                      <Font name="System Bold" size="15.0" />
+                                  </font>
+                              </Label>
+                              <HBox fx:id="winsHBox" alignment="CENTER" />
+                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                          </VBox>
+                      </center>
+                      <left>
+                          <TreeView fx:id="studentTreeView" showRoot="false" BorderPane.alignment="CENTER">
+                              <BorderPane.margin>
+                                  <Insets bottom="10.0" left="10.0" right="10.0" />
+                              </BorderPane.margin>
+                          </TreeView>
+                      </left>
+                      <top>
+                          <HBox alignment="CENTER" BorderPane.alignment="CENTER">
+                              <Button mnemonicParsing="false" onMouseClicked="#selectPlayer" text="Use Selected User">
+                                  <HBox.margin>
+                                      <Insets left="5.0" />
+                                  </HBox.margin>
+                              </Button>
+                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
+                              <TextField fx:id="discordNameTextField" alignment="CENTER" editable="false" promptText="Name">
+                                  <font>
+                                      <Font size="20.0" />
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets bottom="5.0" left="10.0" right="10.0" top="10.0" />
+                                  </HBox.margin>
+                              </TextField>
+                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
+                              <Button mnemonicParsing="false" onMouseClicked="#updatePlayer" text="Update Info">
+                                  <HBox.margin>
+                                      <Insets right="5.0" />
+                                  </HBox.margin>
+                              </Button>
+                          </HBox>
+                      </top>
+                   </BorderPane>
+               </Tab>
+              <Tab closable="false" text="Dice Roll">
+                  <HBox alignment="CENTER" spacing="20.0">
+                      <FlowPane fx:id="rngFlow" alignment="CENTER" columnHalignment="CENTER" hgap="20.0" vgap="20.0" />
+                      <VBox alignment="CENTER" spacing="20.0">
+                          <TextField fx:id="customRollField" alignment="CENTER" promptText="Custom Roll">
+                              <font>
+                                  <Font size="20.0" />
+                              </font>
+                              <VBox.margin>
+                                  <Insets left="10.0" right="10.0" />
+                              </VBox.margin>
+                          </TextField>
+                          <Button mnemonicParsing="false" onMouseClicked="#customRNG" text="Custom">
+                              <font>
+                                  <Font name="Calibri Bold" size="30.0" />
+                              </font>
+                          </Button>
+                          <Label fx:id="rollLabel" alignment="CENTER" contentDisplay="CENTER" prefHeight="94.0" prefWidth="334.0" text="[#]" textAlignment="CENTER">
+                              <font>
+                                  <Font size="65.0" />
+                              </font>
+                          </Label>
+                      </VBox>
+                  </HBox>
+              </Tab>
+               <Tab closable="false" text="Countdowns">
+                   <HBox alignment="CENTER" spacing="20.0">
+                       <FlowPane fx:id="timeFlow" alignment="CENTER" columnHalignment="CENTER" hgap="20.0" vgap="20.0" />
+                       <VBox alignment="CENTER" spacing="20.0">
+                           <TextField fx:id="customTimeField" alignment="CENTER" promptText="mm:ss">
+                               <font>
+                                   <Font size="25.0" />
+                               </font>
+                           </TextField>
+                           <Button mnemonicParsing="false" onMouseClicked="#customTimer" text="Custom">
+                               <font>
+                                   <Font name="System Bold" size="23.0" />
+                               </font>
+                           </Button>
+                           <Label fx:id="timerLabel" text="0:00">
+                               <font>
+                                   <Font name="System Bold" size="40.0" />
+                               </font>
+                           </Label>
+                           <HBox alignment="CENTER">
+                               <Button mnemonicParsing="false" onMouseClicked="#stopTimer" text="■">
+                                   <font>
+                                       <Font name="System Bold" size="24.0" />
+                                   </font>
+                                   <HBox.margin>
+                                       <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                   </HBox.margin>
+                               </Button>
+                               <ToggleButton fx:id="playToggle" mnemonicParsing="false" onMouseClicked="#pauseResumeTimer" text="▶">
+                                   <font>
+                                       <Font name="System Bold" size="24.0" />
+                                   </font>
+                                   <HBox.margin>
+                                       <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                   </HBox.margin>
+                               </ToggleButton>
+                           </HBox>
+                       </VBox>
+                   </HBox>
+               </Tab>
+           </TabPane>
+       </VBox>
+   </center>
+</BorderPane>
