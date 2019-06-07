@@ -1,6 +1,6 @@
 # Danganronpa Murder Mystery Tool (DMMT)
 
-![Current Version](https://img.shields.io/badge/Latest_Version-0.6-green.svg)
+![Current Version](https://img.shields.io/badge/dynamic/json.svg?color=brightgreen&label=Latest%20Version&query=tag_name&url=https%3A%2F%2Fgithub.com%2FShadow-Spade%2FDanganronpa-Murder-Mystery-Tool%2Freleases%2Flatest)
 
 ## About
 
