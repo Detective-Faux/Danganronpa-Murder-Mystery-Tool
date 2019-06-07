@@ -705,8 +705,8 @@ public class Controller implements Initializable {
             in.close();
             Arrays.stream(responseSB.toString().split("\"tag_name\":")).skip(1).map(l -> l.split(",")[0]).forEach(sb::append);
             String version = sb.toString().split("\"")[1];
-            if(version.equals(Main.VERSION)) alertNoUpdate();
-            else if(!silent) alertNewUpdate(version);
+            if(!version.equals(Main.VERSION))alertNewUpdate(version);
+            else if(!silent) alertNoUpdate();
         } catch (IOException e) {
             e.printStackTrace();
         }
