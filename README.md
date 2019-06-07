@@ -36,7 +36,7 @@ Here's an example of how you should format you new spreadsheet:
 
 https://docs.google.com/spreadsheets/d/1QyhbDICpzsgfMZGyjWeL8AcxVOp5e_geoT-70gmRPKY/edit?usp=sharing
 
-Once you have your spreadsheet ready to be used, you'll need it's ID. 
+Once you have your spreadsheet ready to be used, you'll need its ID. 
 This can be found between the **spreadsheets/d/** and the **/edit** parts of your spreadsheet's URL
 
 ### Discord Items
@@ -51,7 +51,7 @@ To do so, edit the following link to your desire:
 https://discordapp.com/oauth2/authorize?&client_id=Your_Bots_ID_Here&scope=bot&permissions=8
 
 Replace the "Your_Bots_ID_Here" with the ID of your bot, and the number at the end of "permissions=" with the permissions you'd like.  
-(This may change in the future when the bot get's more helpful features, but for now, any or no permissions work for the bot)
+(This may change in the future when the bot gets more helpful features, but for now, any or no permissions work for the bot)
 
 Finally, you'll lastly need your Discord server's ID.
 To find this, you'll need to enable developer options, which can be found in your Appearance Settings in Discord.  
@@ -93,7 +93,7 @@ You should end up with a screen that looks like this:
 The **List of Players** section will show you a list of all the users on the spreadsheet.
 To add a user to the **Who's Playing** field, just click on the user you want to add in the **List of Players**
 and use the right arrow to move them over to the list.
-If you have any moderators (probably yourself) who would like to know all the finalised data,
+If you have any moderators (probably yourself) who would like to know all the finalized data,
 use the up arrow on after selecting a user to move them to the **Moderators** field.
 
 **Notice**: You will not be able to send out your role selection until you sync up your list of Roles and Players lengths so that they match.
@@ -130,5 +130,5 @@ This concludes the Help section.
 I want to thank those for inspiring me to go through with this project,
 and I want to thank the people who decide to use it.
 It means a lot that my work is getting used for things like this,
-so for the bottom of my heart,
+so from the bottom of my heart,
 thank you for your support and I hope you enjoy as I continue development! 
