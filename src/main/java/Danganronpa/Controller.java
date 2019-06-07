@@ -70,7 +70,7 @@ public class Controller implements Initializable {
     private static final ArrayList<Player> PLAYERS = new ArrayList<>();
     private static final ArrayList<String> RESOURCES = new ArrayList<>();
     private static final ArrayList<Role> ROLES = new ArrayList<>();
-    private static final String[] CONFIG_FIELDS = new String[]{"guildID","sheetID","discordToken","playerRange","rolesRange","tagsRange","gameModesRange","prefix","hierarchy"},
+    private static final String[] CONFIG_FIELDS = new String[]{"guildID","sheetID","discordToken","playersRange","rolesRange","tagsRange","gameModesRange","prefix","hierarchy"},
             CONFIG_DEFAULTS = new String[]{"","","","Players!A2:P","Roles!A2:C","Tags!A2:C","Game Modes!A2:Z","m&","Investigative,Evidence Tampering,Chaos,Miscellaneous,Protector,Investigative,Neutral Evil,Miscellaneous,Chaos,Miscellaneous,Chain"};
     private static final String GITHUB_URL = "Shadow-Spade/Danganronpa-Murder-Mystery-Tool/releases/latest";
     private static SelfCredentials sc;
@@ -117,7 +117,9 @@ public class Controller implements Initializable {
             if(f.createNewFile()){
                 System.out.println("config.properties file not found...\nCreating new config.properties file");
                 for(int x = 0; x < CONFIG_FIELDS.length; x++) config.setProperty(CONFIG_FIELDS[x], CONFIG_DEFAULTS[x]);
-                quarryInfoAlert(config);
+                while (config.getProperty(CONFIG_FIELDS[0],CONFIG_DEFAULTS[0]).equals("") || config.getProperty(CONFIG_FIELDS[1],CONFIG_DEFAULTS[1]).equals("") || config.getProperty(CONFIG_FIELDS[2],CONFIG_DEFAULTS[2]).equals("")){
+                    quarryInfoAlert(config);
+                }
                 config.store(new FileOutputStream(f),null);
             }
             else {
@@ -126,7 +128,7 @@ public class Controller implements Initializable {
                 for(int x = 0; x < CONFIG_FIELDS.length; x++){
                     if(config.getProperty(CONFIG_FIELDS[x]) == null) config.setProperty(CONFIG_FIELDS[x], CONFIG_DEFAULTS[x]);
                 }
-                if(config.getProperty("guildID","").equals("") || config.getProperty("sheetID","").equals("") || config.getProperty("discordToken","").equals("")) {
+                while (config.getProperty(CONFIG_FIELDS[0],CONFIG_DEFAULTS[0]).equals("") || config.getProperty(CONFIG_FIELDS[1],CONFIG_DEFAULTS[1]).equals("") || config.getProperty(CONFIG_FIELDS[2],CONFIG_DEFAULTS[2]).equals("")) {
                     System.out.println("config.properties file is missing critical information!!");
                     quarryInfoAlert(config);
                     config.store(new FileOutputStream(f), null);
@@ -264,8 +266,6 @@ public class Controller implements Initializable {
 
         // Convert the result to a username-password-pair when the login button is clicked.
         dialog.setResultConverter(dialogButton -> ((dialogButton == loginButtonType)?(new ArrayList<>(Arrays.asList(serverID.getText(), sheetID.getText(), botID.getText()))):(null)));
-
-        dialog.setOnCloseRequest(e -> System.exit(0));
 
         dialog.showAndWait().ifPresent(ret -> {
             config.setProperty("guildID",ret.get(0));
