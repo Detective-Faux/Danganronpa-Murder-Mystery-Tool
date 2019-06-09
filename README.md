@@ -85,13 +85,13 @@ add a tag or remove the currently selected role.
 
 ### Players
 
-Once you've got a list of Roles you like, Click over to the **Player Select** tab at the top.
+Once you've got a list of Roles you like, Click over to the **User Select** tab at the top.
 You should end up with a screen that looks like this:
 
 ![players](https://i.imgur.com/NJcLmgn.png)
 
-The **List of Players** section will show you a list of all the users on the spreadsheet.
-To add a user to the **Who's Playing** field, just click on the user you want to add in the **List of Players**
+The **List of Users** section will show you a list of all the users on the spreadsheet.
+To add a user to the **Who's Playing** field, just click on the user you want to add in the **List of Users**
 and use the right arrow to move them over to the list.
 If you have any moderators (probably yourself) who would like to know all the finalized data,
 use the up arrow on after selecting a user to move them to the **Moderators** field.
@@ -104,7 +104,7 @@ Once everything is setup, click the **Send Roles** button at the bottom,
 and everyone you have selected in your lists should receive a discord message with their role,
 and moderators should get a quick list of who all has what role/tag.
 
-![player message](https://i.imgur.com/qxm7qOE.png)
+![user message](https://i.imgur.com/qxm7qOE.png)
 
 ![moderator message](https://i.imgur.com/gJlhXzN.png)
 
@@ -118,7 +118,7 @@ There's a simple Dice roller, and a simple Countdown Timer for the needs of the 
 ![Countdown](https://i.imgur.com/TroSEfJ.png)
 
 The other more notable feature is the **Score Updater** tab.
-This tab is just a quick way to update the scores of each player that's playing the current round.  
+This tab is just a quick way to update the scores of each user that's playing the current round.  
 To update a user's info, click the user you want to update, click the **Use Selected User** button,
 edit the values, and when you're done click the **Update Info** button.
 

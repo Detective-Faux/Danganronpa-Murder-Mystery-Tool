@@ -3,34 +3,34 @@ package Danganronpa.Helpers.GameItems;
 import java.util.ArrayList;
 import java.util.Arrays;
 
-public class Student {
-    private Player player;
+public class PackagedUser {
+    private User user;
     private Role role;
     private ArrayList<Tag> tags;
 
-    public Student(Player player, Role role, ArrayList<Tag> tags) {
-        this.player = player;
+    public PackagedUser(User user, Role role, ArrayList<Tag> tags) {
+        this.user = user;
         this.role = role;
         this.tags = tags;
     }
-    public Student(Role role){
+    public PackagedUser(Role role){
         this(null, role, new ArrayList<>());
     }
-    public Student(Role role, Tag...tags){
+    public PackagedUser(Role role, Tag...tags){
         this(null, role, new ArrayList<>(Arrays.asList(tags)));
     }
-    public Student(){
+    public PackagedUser(){
         this(null, null, new ArrayList<>());
     }
 
-    public Player getPlayer() {
-        return player;
+    public User getUser() {
+        return user;
     }
     public String getID(){
-        return player.getID();
+        return user.getID();
     }
-    public void setPlayer(Player player) {
-        this.player = player;
+    public void setUser(User user) {
+        this.user = user;
     }
 
     public Role getRole() {
@@ -63,6 +63,6 @@ public class Student {
 
     @Override
     public String toString() {
-        return ""+getPlayer()+": "+getTagsAsString()+getRole();
+        return ""+ getUser()+": "+getTagsAsString()+getRole();
     }
 }

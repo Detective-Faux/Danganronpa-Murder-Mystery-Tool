@@ -1,6 +1,0 @@
-The Danganronpa Murder Mystery Tool (DMMT) is an application that was developed in necessity for an ease toward the game's startup time.
-This project not only was something that I decided to do of my own volition, but I started it to get more familiar with external libraries and JavaFX.
-
-If you would like more information on the project, feel free to contact me on Discord @Shadow Spade#1335
-or you can DM me on Twitter @ShadowSpadeTV
-Otherwise, I hope you find the tool useful in your own way!

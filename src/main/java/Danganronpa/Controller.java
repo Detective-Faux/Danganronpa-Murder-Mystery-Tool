@@ -56,7 +56,6 @@ import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -67,16 +66,16 @@ public class Controller implements Initializable {
     //--Global Items--//
     public static final ArrayList<Tag> TAGS = new ArrayList<>();
     private static final ArrayList<GameMode> GAME_MODES = new ArrayList<>();
-    private static final ArrayList<Player> PLAYERS = new ArrayList<>();
+    private static final ArrayList<User> USERS = new ArrayList<>();
     private static final ArrayList<String> RESOURCES = new ArrayList<>();
     private static final ArrayList<Role> ROLES = new ArrayList<>();
     private static SelfCredentials sc;
     private static Sheets service;
     private static JDA jda;
     private ArrayList<TextField> customGameField = new ArrayList<>(), playerWinsFields = new ArrayList<>();
-    private ArrayList<Student> students = new ArrayList<>();
+    private ArrayList<PackagedUser> packagedUsers = new ArrayList<>();
     private Timeline timer = new Timeline();
-    private Student toUpdate = null;
+    private PackagedUser toUpdate = null;
     private Media gong;
     private int curTime;
 
@@ -95,8 +94,8 @@ public class Controller implements Initializable {
     public MenuItem removeRoleMenuItem, updateBar;
     public Menu addRoleMenu, tagMenu;
     public TreeView<String> roleTree;
-    public TreeView<Player> playerTree, playingTree, modsTree;
-    public TreeView<Student> studentTreeView;
+    public TreeView<User> playerTree, playingTree, modsTree;
+    public TreeView<PackagedUser> studentTreeView;
     public ComboBox<GameMode> gamemodeBox;
     public Label rollLabel, statusLabel, timerLabel;
 
@@ -189,9 +188,9 @@ public class Controller implements Initializable {
         }
         //"Dynamic" Score Updating Fields
         System.out.println("Fixing Scores Tab");
-        for(int x = 0; x < Player.WIN_TYPES.length; x++){
+        for(int x = 0; x < User.WIN_TYPES.length; x++){
             TextField addable = new TextField();
-            addable.setPromptText("# "+Player.WIN_TYPES[x]);
+            addable.setPromptText("# "+ User.WIN_TYPES[x]);
             addable.setAlignment(Pos.CENTER);
             HBox.setMargin(addable, new Insets(0,5,0,5));
             playerWinsFields.add(addable);
@@ -273,28 +272,28 @@ public class Controller implements Initializable {
 
     //--Update Spreadsheet--//
     public static void update(Member m){
-        Player s = new Player(m);
-        for(Player plr : PLAYERS) if(plr.getID().equals(s.getID())) return;
-        PLAYERS.add(s);
+        User s = new User(m);
+        for(User plr : USERS) if(plr.getID().equals(s.getID())) return;
+        USERS.add(s);
         updateSheet(s);
     }
     public static void checkNewUsers(String guild_id){
-        ArrayList<Player> temp = new ArrayList<>();
+        ArrayList<User> temp = new ArrayList<>();
         boolean found = false;
         for(Member m: jda.getGuildById(guild_id).getMembers()){
             if(m.getUser().isBot()) continue;
-            for(Player s: PLAYERS) if(s.getID().equals(m.getUser().getId())) found = true;
-            if(!found) temp.add(new Player(m));
+            for(User s: USERS) if(s.getID().equals(m.getUser().getId())) found = true;
+            if(!found) temp.add(new User(m));
             found = false;
         }
         if(temp.isEmpty()) return;
-        PLAYERS.addAll(temp);
-        updateSheet(temp.toArray(new Player[0]));
+        USERS.addAll(temp);
+        updateSheet(temp.toArray(new User[0]));
     }
-    private static void updateSheet(Player...newPlayers){
+    private static void updateSheet(User... newUsers){
         try{
             List<List<Object>> sheet = service.spreadsheets().values().get(sc.getSheetID(), sc.getPlayerRange()).execute().getValues(), toAppend = new ArrayList<>();
-            for(Player s: newPlayers) toAppend.add(addPlayer(s));
+            for(User s: newUsers) toAppend.add(addPlayer(s));
             List<ValueRange> data = new ArrayList<ValueRange>() {{ add(new ValueRange().setRange("Players!A" + (2 + sheet.size()) + ":P").setValues(toAppend));}};
             BatchUpdateValuesRequest body = new BatchUpdateValuesRequest().setValueInputOption("USER_ENTERED").setData(data);
             BatchUpdateValuesResponse result = service.spreadsheets().values().batchUpdate(sc.getSheetID(), body).execute();
@@ -307,11 +306,11 @@ public class Controller implements Initializable {
     //--Game Stuff--//
     public void startGame(){
         StringBuilder sb = new StringBuilder(), fileOut = new StringBuilder();
-        ArrayList<TreeItem<Player>> playing = new ArrayList<>(playingTree.getRoot().getChildren());
+        ArrayList<TreeItem<User>> playing = new ArrayList<>(playingTree.getRoot().getChildren());
         Collections.shuffle(playing);
         //Guaranteed that both are same length
-        for(int x = 0; x < students.size(); x++) students.get(x).setPlayer(playing.get(x).getValue());
-        for(Student s: students){
+        for(int x = 0; x < packagedUsers.size(); x++) packagedUsers.get(x).setUser(playing.get(x).getValue());
+        for(PackagedUser s: packagedUsers){
             sb.setLength(0);
             sb.append("**The Ultimate ").append(s.getRole()).append("**:\n").append(s.getRole().getDescription()).append("\n\n");
             for(Tag t: s.getTags()) {
@@ -323,11 +322,11 @@ public class Controller implements Initializable {
         }
 
         //Sends selected mods the list of those playing with their roles
-        for(TreeItem<Player> tis: modsTree.getRoot().getChildren()) sendDM(tis.getValue().getID(), "```\n"+fileOut.toString()+"```");
+        for(TreeItem<User> tis: modsTree.getRoot().getChildren()) sendDM(tis.getValue().getID(), "```\n"+fileOut.toString()+"```");
 
         //generates file with all player's roles as backup
         try{
-            String[] headerText = new String[]{"Here?","Player Name","Tag","Role","Extra Notes","","Day 1","Day 2","Day 3","Day 4","Day 5","Day 6","Day 7","Day 8"};
+            String[] headerText = new String[]{"Here?","User Name","Tag","Role","Extra Notes","","Day 1","Day 2","Day 3","Day 4","Day 5","Day 6","Day 7","Day 8"};
             FileOutputStream output = new FileOutputStream(new File("./Game.xls").getAbsoluteFile());
             HSSFWorkbook workbook = new HSSFWorkbook();
             HSSFSheet sheet = workbook.createSheet("Game ("+LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd MMM, HH-mm"))+")");
@@ -350,13 +349,13 @@ public class Controller implements Initializable {
                 created.setCellStyle(headStyle);
             }
 
-            for(int x = 0; x < students.size(); x++){
+            for(int x = 0; x < packagedUsers.size(); x++){
                 HSSFRow row = sheet.createRow(x+1);
                 String[] data = new String[]{
                         "✓",
-                        students.get(x).getPlayer().toString(),
-                        students.get(x).getFullTagsAsString(),
-                        students.get(x).getRole().toString()
+                        packagedUsers.get(x).getUser().toString(),
+                        packagedUsers.get(x).getFullTagsAsString(),
+                        packagedUsers.get(x).getRole().toString()
                 };
                 for(int y = 0; y < data.length;  y++){
                     Cell created = row.createCell(y);
@@ -375,34 +374,34 @@ public class Controller implements Initializable {
         }
         confirmButton.setDisable(true);
         scoreUpdaterTab.setDisable(false);
-        TreeItem<Student> root = new TreeItem<>();
+        TreeItem<PackagedUser> root = new TreeItem<>();
         root.setExpanded(true);
-        for(Student s: students) root.getChildren().add(new TreeItem<>(s));
+        for(PackagedUser s: packagedUsers) root.getChildren().add(new TreeItem<>(s));
         studentTreeView.setRoot(root);
     }
     public void selectPlayer(){
         toUpdate = studentTreeView.getSelectionModel().getSelectedItems().get(0).getValue();
-        discordNameTextField.setText(toUpdate.getPlayer().getName());
-        effectiveNameTextField.setText(toUpdate.getPlayer().getEffectiveName());
-        lossesTextField.setText(""+toUpdate.getPlayer().getLosses());
-        killsTextField.setText(""+toUpdate.getPlayer().getKills());
-        performanceTextField.setText(""+toUpdate.getPlayer().getPerformance());
-        leftTextField.setText(""+toUpdate.getPlayer().getLeft());
-        for(int x = 0; x < toUpdate.getPlayer().getWins().length; x++) playerWinsFields.get(x).setText(""+toUpdate.getPlayer().getSingleWin(x));
+        discordNameTextField.setText(toUpdate.getUser().getName());
+        effectiveNameTextField.setText(toUpdate.getUser().getEffectiveName());
+        lossesTextField.setText(""+toUpdate.getUser().getLosses());
+        killsTextField.setText(""+toUpdate.getUser().getKills());
+        performanceTextField.setText(""+toUpdate.getUser().getPerformance());
+        leftTextField.setText(""+toUpdate.getUser().getLeft());
+        for(int x = 0; x < toUpdate.getUser().getWins().length; x++) playerWinsFields.get(x).setText(""+toUpdate.getUser().getSingleWin(x));
     }
     public void updatePlayer(){
         if(toUpdate == null) return;
-        toUpdate.getPlayer().setEffectiveName(effectiveNameTextField.getText());
-        toUpdate.getPlayer().setLosses(Integer.parseInt(lossesTextField.getText()));
-        toUpdate.getPlayer().setKills(Integer.parseInt(killsTextField.getText()));
-        toUpdate.getPlayer().setPerformance(Integer.parseInt(performanceTextField.getText()));
-        toUpdate.getPlayer().setLeft(Integer.parseInt(leftTextField.getText()));
+        toUpdate.getUser().setEffectiveName(effectiveNameTextField.getText());
+        toUpdate.getUser().setLosses(Integer.parseInt(lossesTextField.getText()));
+        toUpdate.getUser().setKills(Integer.parseInt(killsTextField.getText()));
+        toUpdate.getUser().setPerformance(Integer.parseInt(performanceTextField.getText()));
+        toUpdate.getUser().setLeft(Integer.parseInt(leftTextField.getText()));
         int[] newWins = new int[playerWinsFields.size()];
         for(int x = 0; x < newWins.length; x++) newWins[x] = Integer.parseInt(playerWinsFields.get(x).getText());
-        toUpdate.getPlayer().setWins(newWins);
-        updatePlayerInSheet(toUpdate.getPlayer());
+        toUpdate.getUser().setWins(newWins);
+        updatePlayerInSheet(toUpdate.getUser());
     }
-    private void updatePlayerInSheet(Player s){
+    private void updatePlayerInSheet(User s){
         try{
             List<List<Object>> sheet = service.spreadsheets().values().get(sc.getSheetID(), sc.getPlayerRange()).execute().getValues(), toAppend = new ArrayList<>();
             int index = 0;
@@ -499,7 +498,7 @@ public class Controller implements Initializable {
     }
     public void clearRoles(){
         roleTree.getRoot().getChildren().clear();
-        students.clear();
+        packagedUsers.clear();
         statusUpdate();
     }
     public void menuRequest(ContextMenuEvent event){
@@ -509,7 +508,7 @@ public class Controller implements Initializable {
         event.consume();
     }
     public void menuRemoveRole(){
-        students.remove(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
+        packagedUsers.remove(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
         roleTree.getRoot().getChildren().remove(roleTree.getSelectionModel().getSelectedItem());
         statusUpdate();
     }
@@ -519,7 +518,7 @@ public class Controller implements Initializable {
         if(len > 0 && len <= ROLES.size()) generateGame(hierarchy, len, gamemodeBox.getValue().performActions(len));
     }
     private void generateGame(ArrayList<String> heir, int n, ArrayList<Tag> tags){
-        students.clear();
+        packagedUsers.clear();
         ArrayList<Role> roleSelection = new ArrayList<>(), tempHolder = freshCopy();
         for(int ran, x = 0; x < n; x++) {
             ArrayList<Role> sub;
@@ -543,13 +542,13 @@ public class Controller implements Initializable {
         //Create Students
         Collections.shuffle(tags);
         for(int x = 0; x < n; x++){
-            if(tags.get(x).getName().equals("")) students.add(new Student(roleSelection.get(x)));
-            else students.add(new Student(roleSelection.get(x),tags.get(x)));
+            if(tags.get(x).getName().equals("")) packagedUsers.add(new PackagedUser(roleSelection.get(x)));
+            else packagedUsers.add(new PackagedUser(roleSelection.get(x),tags.get(x)));
         }
 
         //Generate Tree
         TreeItem<String> root = new TreeItem<>();
-        for(Student s : students) {
+        for(PackagedUser s : packagedUsers) {
             TreeItem<String> temp = makeBranch(s.getTagsAsString()+s.getRole() ,root);
             makeBranch(s.getRole().getDescription(), temp);
         }
@@ -578,25 +577,25 @@ public class Controller implements Initializable {
         for(Role r: roles){
             TreeItem<String> temp = makeBranch(r.toString(), roleTree.getRoot());
             makeBranch(r.getDescription(),temp);
-            students.add(new Student(r));
+            packagedUsers.add(new PackagedUser(r));
         }
         if(gamemodeBox.getValue() == null || !gamemodeBox.getValue().getName().equals("Custom")) gamemodeBox.setValue(gamemodeBox.getItems().get(gamemodeBox.getItems().size()-1));
         statusUpdate();
     }
     private void menuAddTag(Tag t){
-        Student s = students.get(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
+        PackagedUser s = packagedUsers.get(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
         s.addTag(t);
         roleTree.getSelectionModel().getSelectedItem().setValue(s.getTagsAsString()+s.getRole());
         statusUpdate();
     }
 
-    //--Player Building--//
+    //--User Building--//
     public void refreshPlayers(){
-        PLAYERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        TreeItem<Player> newRoot = new TreeItem<>();
-        for(Player s: PLAYERS) newRoot.getChildren().add(new TreeItem<>(s));
+        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        TreeItem<User> newRoot = new TreeItem<>();
+        for(User s: USERS) newRoot.getChildren().add(new TreeItem<>(s));
         for(int x = 0; x < newRoot.getChildren().size(); x++){
-            for(TreeItem<Player> s: playingTree.getRoot().getChildren()){
+            for(TreeItem<User> s: playingTree.getRoot().getChildren()){
                 if(newRoot.getChildren().get(x).getValue().getID().equals(s.getValue().getID())){
                     newRoot.getChildren().remove(x);
                     x -= 1;
@@ -631,8 +630,8 @@ public class Controller implements Initializable {
         refreshPlayers();
         statusUpdate();
     }
-    private void fromOneToAnother(TreeView<Player> from, TreeView<Player> to){
-        ObservableList<TreeItem<Player>> temp = from.getSelectionModel().getSelectedItems();
+    private void fromOneToAnother(TreeView<User> from, TreeView<User> to){
+        ObservableList<TreeItem<User>> temp = from.getSelectionModel().getSelectedItems();
         if(!temp.isEmpty() && !from.getRoot().getChildren().isEmpty()) {
             to.getRoot().getChildren().addAll(temp);
             from.getRoot().getChildren().removeAll(temp);
@@ -641,19 +640,19 @@ public class Controller implements Initializable {
         treeViewSort(to);
         statusUpdate();
     }
-    private void treeViewSort(TreeView<Player> tree){
+    private void treeViewSort(TreeView<User> tree){
         tree.getRoot().getChildren().sort(Comparator.comparing(t -> t.getValue().getEffectiveName().toLowerCase()));
     }
-    private void makePlayerTree(TreeView<Player> tree){
-        PLAYERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        TreeItem<Player> root = new TreeItem<>();
-        for(Player s: PLAYERS) root.getChildren().add(new TreeItem<>(s));
+    private void makePlayerTree(TreeView<User> tree){
+        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        TreeItem<User> root = new TreeItem<>();
+        for(User s: USERS) root.getChildren().add(new TreeItem<>(s));
         root.setExpanded(true);
         tree.setRoot(root);
         tree.setCellFactory(item -> {
-            TreeCell<Player> treeCell = new TreeCell<Player>() {
+            TreeCell<User> treeCell = new TreeCell<User>() {
                 @Override
-                protected void updateItem(Player item, boolean empty) {
+                protected void updateItem(User item, boolean empty) {
                     super.updateItem(item, empty);
                     if (item != null && !empty) setText(item.toString());
                     else setText("");
@@ -709,21 +708,7 @@ public class Controller implements Initializable {
         }
     }
     public void getAbout(){
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("About DMMT");
-        alert.setHeaderText("What is The Danganronpa Murder Mystery Tool?");
-        alert.setContentText("I dunno...");
-        try{
-            File f = new File(Main.class.getResource("/Info/about.txt").getPath());
-            FileInputStream fis = new FileInputStream(f);
-            byte[] data = new byte[(int)f.length()];
-            if(fis.read(data) == 0) System.out.println("Data gathered");
-            fis.close();
-            alert.setContentText(new String(data, StandardCharsets.UTF_8));
-        }catch (IOException e){
-            e.printStackTrace();
-        }
-        alert.showAndWait();
+        openLink("/blob/master/README.md#about");
     }
     public void getHelp(){
         openLink("/blob/master/README.md#how-do-i-use-this-program");
@@ -757,7 +742,7 @@ public class Controller implements Initializable {
     }
 
     //--Helpers--//
-    private static List<Object> addPlayer(Player s){
+    private static List<Object> addPlayer(User s){
         return Arrays.asList(
                 s.getID(), s.getName(), s.getEffectiveName(),
                 "=SUM(INDIRECT(\"RC[1]\", FALSE),INDIRECT(\"RC[2]\", FALSE))",
@@ -804,7 +789,7 @@ public class Controller implements Initializable {
                             ROLES.add(new Role(row));
                             if(!RESOURCES.contains(row.get(0).toString())) RESOURCES.add(row.get(0).toString());
                         }
-                        else if(range.equals(sc.getPlayerRange())) PLAYERS.add(new Player(row));
+                        else if(range.equals(sc.getPlayerRange())) USERS.add(new User(row));
                         else if(range.equals(sc.getTagsRange())) TAGS.add(new Tag(row));
                         else if(range.equals(sc.getGameModeRange())) GAME_MODES.add(new GameMode(row));
                     }

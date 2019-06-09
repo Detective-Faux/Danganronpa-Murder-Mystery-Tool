@@ -4,13 +4,13 @@ import net.dv8tion.jda.core.entities.Member;
 
 import java.util.List;
 
-public class Player{
+public class User {
     public static final String[] WIN_TYPES = new String[]{"Graduation","Mastermind","Evil","Despair","Cult","Vampire"};
     private String name, effectiveName, ID;
     private int losses, kills, performance, left;
     private int[] wins;
 
-    public Player(Member member){
+    public User(Member member){
         this.name = member.getUser().getName();
         this.effectiveName = member.getEffectiveName();
         this.ID = member.getUser().getId();
@@ -20,7 +20,7 @@ public class Player{
         this.left = 0;
         this.wins = new int[6];
     }
-    public Player(Player p){
+    public User(User p){
         this.name = p.getName();
         this.effectiveName = p.getEffectiveName();
         this.ID = p.getID();
@@ -30,7 +30,7 @@ public class Player{
         this.wins = p.getWins();
         this.left = p.getLeft();
     }
-    public Player(String ID, String name, String effectiveName, int losses, int kills, int performance, int left, int... wins) {
+    public User(String ID, String name, String effectiveName, int losses, int kills, int performance, int left, int... wins) {
         this.ID = ID;
         this.name = name;
         this.effectiveName = effectiveName;
@@ -40,11 +40,11 @@ public class Player{
         this.left = left;
         this.wins = wins;
     }
-    public Player(List row){
+    public User(List row){
         this(
-                //--Player Info--//
+                //--User Info--//
                 row.get(0).toString(), row.get(1).toString(), row.get(2).toString(),
-                //--Player Stats--//
+                //--User Stats--//
                 Integer.parseInt(row.get(5).toString()), Integer.parseInt(row.get(6).toString()), Integer.parseInt(row.get(7).toString()), Integer.parseInt(row.get(8).toString()),
                 //--Win Types--//
                 Integer.parseInt(row.get(10).toString()), Integer.parseInt(row.get(11).toString()), Integer.parseInt(row.get(12).toString()),
