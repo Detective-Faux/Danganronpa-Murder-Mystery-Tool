@@ -8,14 +8,6 @@ import net.dv8tion.jda.core.hooks.ListenerAdapter;
 
 public class Capsule extends ListenerAdapter {
     private String guildID, prefix;
-    /*TODO Auto Role update
-    * Alumni		- 573036850114199562
-    * Senior		- 573036850801803264
-    * Junior		- 573036850990678017
-    * Sophomore 	- 573036851665829889
-    * Freshman 	    - 573036852601421834
-    * New Player 	- 573036853205139466
-    * */
 
     public Capsule(String guildID, String prefix){
         this.guildID = guildID;

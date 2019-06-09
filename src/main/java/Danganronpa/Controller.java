@@ -70,9 +70,6 @@ public class Controller implements Initializable {
     private static final ArrayList<Player> PLAYERS = new ArrayList<>();
     private static final ArrayList<String> RESOURCES = new ArrayList<>();
     private static final ArrayList<Role> ROLES = new ArrayList<>();
-    private static final String[] CONFIG_FIELDS = new String[]{"guildID","sheetID","discordToken","playersRange","rolesRange","tagsRange","gameModesRange","prefix","hierarchy"},
-            CONFIG_DEFAULTS = new String[]{"","","","Players!A2:P","Roles!A2:C","Tags!A2:C","Game Modes!A2:Z","m&","Investigative,Evidence Tampering,Chaos,Miscellaneous,Protector,Investigative,Neutral Evil,Miscellaneous,Chaos,Miscellaneous,Chain"};
-    private static final String GITHUB_URL = "Shadow-Spade/Danganronpa-Murder-Mystery-Tool/releases/latest";
     private static SelfCredentials sc;
     private static Sheets service;
     private static JDA jda;
@@ -109,15 +106,15 @@ public class Controller implements Initializable {
         final NetHttpTransport HTTP_TRANSPORT;
         try {
             System.out.println("Checking for Updates...");
-            updateBar.setOnAction(e -> getGithub(false));
             getGithub(true);
+            updateBar.setOnAction(e -> getGithub(false));
             System.out.println("Checking for config.properties file");
             File f = new File("./config.properties");
             Properties config = new Properties();
             if(f.createNewFile()){
                 System.out.println("config.properties file not found...\nCreating new config.properties file");
-                for(int x = 0; x < CONFIG_FIELDS.length; x++) config.setProperty(CONFIG_FIELDS[x], CONFIG_DEFAULTS[x]);
-                while (config.getProperty(CONFIG_FIELDS[0],CONFIG_DEFAULTS[0]).equals("") || config.getProperty(CONFIG_FIELDS[1],CONFIG_DEFAULTS[1]).equals("") || config.getProperty(CONFIG_FIELDS[2],CONFIG_DEFAULTS[2]).equals("")){
+                for(int x = 0; x < SelfCredentials.CONFIG_FIELDS.length; x++) config.setProperty(SelfCredentials.CONFIG_FIELDS[x], SelfCredentials.CONFIG_DEFAULTS[x]);
+                while (config.getProperty(SelfCredentials.CONFIG_FIELDS[0],SelfCredentials.CONFIG_DEFAULTS[0]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[1],SelfCredentials.CONFIG_DEFAULTS[1]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[2],SelfCredentials.CONFIG_DEFAULTS[2]).equals("")){
                     quarryInfoAlert(config);
                 }
                 config.store(new FileOutputStream(f),null);
@@ -125,10 +122,10 @@ public class Controller implements Initializable {
             else {
                 System.out.println("config.properties file found!");
                 config.load(new FileInputStream(f));
-                for(int x = 0; x < CONFIG_FIELDS.length; x++){
-                    if(config.getProperty(CONFIG_FIELDS[x]) == null) config.setProperty(CONFIG_FIELDS[x], CONFIG_DEFAULTS[x]);
+                for(int x = 0; x < SelfCredentials.CONFIG_FIELDS.length; x++){
+                    if(config.getProperty(SelfCredentials.CONFIG_FIELDS[x]) == null) config.setProperty(SelfCredentials.CONFIG_FIELDS[x], SelfCredentials.CONFIG_DEFAULTS[x]);
                 }
-                while (config.getProperty(CONFIG_FIELDS[0],CONFIG_DEFAULTS[0]).equals("") || config.getProperty(CONFIG_FIELDS[1],CONFIG_DEFAULTS[1]).equals("") || config.getProperty(CONFIG_FIELDS[2],CONFIG_DEFAULTS[2]).equals("")) {
+                while (config.getProperty(SelfCredentials.CONFIG_FIELDS[0],SelfCredentials.CONFIG_DEFAULTS[0]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[1],SelfCredentials.CONFIG_DEFAULTS[1]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[2],SelfCredentials.CONFIG_DEFAULTS[2]).equals("")) {
                     System.out.println("config.properties file is missing critical information!!");
                     quarryInfoAlert(config);
                     config.store(new FileOutputStream(f), null);
@@ -696,7 +693,7 @@ public class Controller implements Initializable {
     //--Menu Bar--//
     private void getGithub(boolean silent){
         try{
-            HttpURLConnection httpCon = (HttpURLConnection) new URL("https://api.github.com/repos/"+GITHUB_URL).openConnection();
+            HttpURLConnection httpCon = (HttpURLConnection) new URL("https://api.github.com/repos/"+SelfCredentials.GITHUB_REPO+"/releases/latest").openConnection();
             httpCon.addRequestProperty("User-Agent", "Mozilla/5.0");
             BufferedReader in = new BufferedReader(new InputStreamReader(httpCon.getInputStream()));
             StringBuilder responseSB = new StringBuilder(), sb = new StringBuilder();
@@ -705,7 +702,7 @@ public class Controller implements Initializable {
             in.close();
             Arrays.stream(responseSB.toString().split("\"tag_name\":")).skip(1).map(l -> l.split(",")[0]).forEach(sb::append);
             String version = sb.toString().split("\"")[1];
-            if(!version.equals(Main.VERSION))alertNewUpdate(version);
+            if(!version.equals(SelfCredentials.VERSION))alertNewUpdate(version, silent);
             else if(!silent) alertNoUpdate();
         } catch (IOException e) {
             e.printStackTrace();
@@ -729,15 +726,18 @@ public class Controller implements Initializable {
         alert.showAndWait();
     }
     public void getHelp(){
-        openLink("Shadow-Spade/Danganronpa-Murder-Mystery-Tool/blob/master/README.md");
+        openLink("/blob/master/README.md#how-do-i-use-this-program");
     }
-    private void alertNewUpdate(String version){
+    private void alertNewUpdate(String version, boolean startup){
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Check for Updates");
-        alert.setHeaderText("A new version ("+version+") of the program is available for download on Github");
+        alert.setHeaderText("A new version (v"+version+") of the program is available for download on Github");
         alert.setContentText("Would you like to Update?");
         Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) openLink(GITHUB_URL);
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            openLink("/releases/latest");
+            if (startup) System.exit(0);
+        }
     }
     private void alertNoUpdate(){
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
@@ -749,7 +749,7 @@ public class Controller implements Initializable {
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
             try {
-                desktop.browse(new URI("https://github.com/"+url));
+                desktop.browse(new URI("https://github.com/"+SelfCredentials.GITHUB_REPO+url));
             } catch (IOException | URISyntaxException e) {
                 e.printStackTrace();
             }
@@ -801,32 +801,12 @@ public class Controller implements Initializable {
                 for (List row: sheetVals) {
                     if(!row.isEmpty()) {
                         if(range.equals(sc.getRolesRange())) {
-                            /* Role format:  [Role Type, Name, Description]
-                             * Player info:  [Discord ID, Discord Name, Effective Name]
-                             * Player stats: [Losses, Kills, Performance, Left Games]
-                             * Player wins:  [Graduation, Mastermind, Evil, Despair, Cult, Vampire]
-                             * */
-                            ROLES.add(new Role(row.get(0).toString(), row.get(1).toString(), row.get(2).toString()));
+                            ROLES.add(new Role(row));
                             if(!RESOURCES.contains(row.get(0).toString())) RESOURCES.add(row.get(0).toString());
                         }
-                        else if(range.equals(sc.getPlayerRange())) {
-                            PLAYERS.add(new Player(
-                                    //--Player Info--//
-                                    row.get(0).toString(), row.get(1).toString(), row.get(2).toString(),
-                                    //--Player Stats--//
-                                    Integer.parseInt(row.get(5).toString()), Integer.parseInt(row.get(6).toString()), Integer.parseInt(row.get(7).toString()), Integer.parseInt(row.get(8).toString()),
-                                    //--Win Types--//
-                                    Integer.parseInt(row.get(10).toString()), Integer.parseInt(row.get(11).toString()), Integer.parseInt(row.get(12).toString()),
-                                    Integer.parseInt(row.get(13).toString()), Integer.parseInt(row.get(14).toString()), Integer.parseInt(row.get(15).toString())
-                            ));
-                        }
-                        else if(range.equals(sc.getTagsRange())){
-                            TAGS.add(new Tag(row.get(0).toString(), row.get(1).toString(), row.get(2).toString()));
-                        }
-                        else if(range.equals(sc.getGameModeRange())){
-                            GAME_MODES.add(new GameMode(row.get(0).toString(), new ArrayList<Object>(row.subList(1,row.size()))));
-                        }
-                        else System.out.println("Something happened?");
+                        else if(range.equals(sc.getPlayerRange())) PLAYERS.add(new Player(row));
+                        else if(range.equals(sc.getTagsRange())) TAGS.add(new Tag(row));
+                        else if(range.equals(sc.getGameModeRange())) GAME_MODES.add(new GameMode(row));
                     }
                 }
             }

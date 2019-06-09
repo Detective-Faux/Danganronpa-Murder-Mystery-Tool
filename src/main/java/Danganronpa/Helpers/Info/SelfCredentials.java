@@ -3,7 +3,12 @@ package Danganronpa.Helpers.Info;
 import java.util.Properties;
 
 public class SelfCredentials {
+    public static final String[] CONFIG_FIELDS = new String[]{"guildID","sheetID","discordToken","playersRange","rolesRange","tagsRange","gameModesRange","prefix","hierarchy"};
+    public static final String[] CONFIG_DEFAULTS = new String[]{"","","","Players!A2:P","Roles!A2:C","Tags!A2:C","Game Modes!A2:Z","m&","Investigative,Evidence Tampering,Chaos,Miscellaneous,Protector,Investigative,Neutral Evil,Miscellaneous,Chaos,Miscellaneous,Chain"};
+    public static final String GITHUB_REPO = "Shadow-Spade/Danganronpa-Murder-Mystery-Tool";
+    public static final String VERSION = "0.6.1";
     private Properties config;
+
     public SelfCredentials(Properties config){
         this.config = config;
     }

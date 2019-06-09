@@ -3,6 +3,7 @@ package Danganronpa.Helpers.GameItems;
 import Danganronpa.Controller;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class GameMode {
     private ArrayList<TagAction> pseudoList;
@@ -12,6 +13,9 @@ public class GameMode {
         this.name = name;
         this.pseudoList = new ArrayList<>();
         for(Object o: pseudoTags) this.pseudoList.add(new TagAction(o.toString()));
+    }
+    public GameMode(List row){
+        this(row.get(0).toString(), new ArrayList<Object>(row.subList(1,row.size())));
     }
 
     public int getCalculatedTagsSize(int len){

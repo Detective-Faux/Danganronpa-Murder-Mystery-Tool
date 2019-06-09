@@ -2,6 +2,8 @@ package Danganronpa.Helpers.GameItems;
 
 import net.dv8tion.jda.core.entities.Member;
 
+import java.util.List;
+
 public class Player{
     public static final String[] WIN_TYPES = new String[]{"Graduation","Mastermind","Evil","Despair","Cult","Vampire"};
     private String name, effectiveName, ID;
@@ -37,6 +39,17 @@ public class Player{
         this.performance = performance;
         this.left = left;
         this.wins = wins;
+    }
+    public Player(List row){
+        this(
+                //--Player Info--//
+                row.get(0).toString(), row.get(1).toString(), row.get(2).toString(),
+                //--Player Stats--//
+                Integer.parseInt(row.get(5).toString()), Integer.parseInt(row.get(6).toString()), Integer.parseInt(row.get(7).toString()), Integer.parseInt(row.get(8).toString()),
+                //--Win Types--//
+                Integer.parseInt(row.get(10).toString()), Integer.parseInt(row.get(11).toString()), Integer.parseInt(row.get(12).toString()),
+                Integer.parseInt(row.get(13).toString()), Integer.parseInt(row.get(14).toString()), Integer.parseInt(row.get(15).toString())
+        );
     }
 
     public String getName() {

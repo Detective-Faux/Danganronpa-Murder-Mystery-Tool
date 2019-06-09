@@ -1,7 +1,9 @@
 package Danganronpa.Helpers.GameItems;
 
+import java.util.List;
+
 public class Role {
-    private String name, type, description;
+    private String type, name, description;
 
     public Role(String type, String name, String description){
         this.type = type;
@@ -10,6 +12,9 @@ public class Role {
     }
     public Role(Role role){
         this(role.getType(), role.getName(), role.getDescription());
+    }
+    public Role(List row){
+        this(row.get(0).toString(), row.get(1).toString(), row.get(2).toString());
     }
 
     public String getName() {

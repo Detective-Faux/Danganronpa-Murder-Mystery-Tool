@@ -9,7 +9,6 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class Main extends Application {
-    static final String VERSION = "0.6.1";
     @Override
     public void start(Stage primaryStage) throws IOException{
         System.out.println("Starting Initialization");
