@@ -40,10 +40,11 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import net.dv8tion.jda.core.AccountType;
-import net.dv8tion.jda.core.JDA;
-import net.dv8tion.jda.core.JDABuilder;
-import net.dv8tion.jda.core.entities.Member;
+import net.dv8tion.jda.api.AccountType;
+import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Member;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -99,6 +100,8 @@ public class Controller implements Initializable {
     public ComboBox<GameMode> gamemodeBox;
     public Label rollLabel, statusLabel, timerLabel;
 
+    //TODO change the score updating page to be a game manager
+
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Build a new authorized API client service.
@@ -147,8 +150,10 @@ public class Controller implements Initializable {
             buildList(sc.getGameModeRange());
             //Setup the bot
             System.out.println("Booting Discord...\n");
-            jda = new JDABuilder(AccountType.BOT).setToken(sc.getDiscordToken()).setBulkDeleteSplittingEnabled(false)
-                    .setAutoReconnect(true).addEventListener(new Capsule(sc.getGuildID(),sc.getPrefix())).build();
+            jda = new JDABuilder(AccountType.BOT).setToken(sc.getDiscordToken())
+                    .setBulkDeleteSplittingEnabled(false).setAutoReconnect(true)
+                    .addEventListeners(new Capsule(sc.getGuildID(),sc.getPrefix()))
+                    .setActivity(Activity.watching("your every move...")).build();
             //Audio
             gong = new Media(Main.class.getResource("/Media/timer.wav").toURI().toString());
         } catch (GeneralSecurityException | IOException | URISyntaxException e) {
