@@ -117,49 +117,11 @@
                               <Insets bottom="5.0" top="5.0" />
                            </VBox.margin>
                               </Label>
-                              <TreeView fx:id="modsTree" prefHeight="110.0" showRoot="false">
-                                  <VBox.margin>
-                                      <Insets bottom="5.0" left="5.0" right="5.0" />
-                                  </VBox.margin>
-                              </TreeView>
-                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
-                              <Button mnemonicParsing="false" onMouseClicked="#addModerators" text="↑">
-                                  <VBox.margin>
-                                      <Insets bottom="5.0" />
-                                  </VBox.margin>
-                                  <font>
-                                      <Font size="18.0" />
-                                  </font>
-                              </Button>
-                              <HBox alignment="CENTER">
-                                  <Button mnemonicParsing="false" onMouseClicked="#removeFromPlaying" text="←">
-                                      <font>
-                                          <Font size="18.0" />
-                                      </font>
-                                  </Button>
-                                  <Label text="Build List">
-                                      <font>
-                                          <Font name="System Bold" size="20.0" />
-                                      </font>
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </Label>
-                                  <Button mnemonicParsing="false" onMouseClicked="#pushToPlaying" text="→">
-                                      <font>
-                                          <Font size="18.0" />
-                                      </font>
-                                  </Button>
-                              </HBox>
-                              <Button mnemonicParsing="false" onMouseClicked="#removeMods" text="↵">
-                                  <font>
-                                      <Font size="18.0" />
-                                  </font>
-                                  <VBox.margin>
-                                      <Insets top="5.0" />
-                                  </VBox.margin>
-                              </Button>
-                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
+                        <ListView fx:id="modsList" VBox.vgrow="ALWAYS">
+                           <VBox.margin>
+                              <Insets bottom="5.0" left="5.0" right="5.0" />
+                           </VBox.margin>
+                        </ListView>
                               <Label fx:id="statusLabel" text="Status:">
                                   <font>
                                       <Font name="System Bold" size="20.0" />
@@ -180,156 +142,65 @@
                           </VBox>
                       </center>
                   <right>
-                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
-                        <children>
-                           <HBox alignment="CENTER" spacing="10.0">
-                              <children>
-                                       <Button mnemonicParsing="false" onMouseClicked="#popCreated" text="⎚">
-                                           <HBox.margin>
-                                               <Insets />
-                                           </HBox.margin>
-                                           <font>
-                                               <Font size="15.0" />
-                                           </font>
-                                       </Button>
-                                       <Label text="Who's Playing">
-                                           <font>
-                                               <Font name="System Bold" size="20.0" />
-                                           </font>
-                                           <HBox.margin>
-                                               <Insets />
-                                           </HBox.margin>
-                                       </Label>
-                              </children>
+                      <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                          <HBox alignment="CENTER" spacing="10.0">
                               <VBox.margin>
-                                 <Insets bottom="5.0" top="5.0" />
+                                  <Insets bottom="5.0" top="5.0"/>
                               </VBox.margin>
-                           </HBox>
-                                <TreeView fx:id="playingTree" showRoot="false" VBox.vgrow="ALWAYS" />
-                        </children>
-                     </VBox>
+                              <Button mnemonicParsing="false" onMouseClicked="#popCreated" text="⎚">
+                                  <HBox.margin>
+                                      <Insets/>
+                                  </HBox.margin>
+                                  <font>
+                                      <Font size="15.0"/>
+                                  </font>
+                              </Button>
+                              <Label text="Who's Playing">
+                                  <font>
+                                      <Font name="System Bold" size="20.0"/>
+                                  </font>
+                                  <HBox.margin>
+                                      <Insets/>
+                                  </HBox.margin>
+                              </Label>
+                          </HBox>
+                          <ListView fx:id="playerList" VBox.vgrow="ALWAYS">
+                             <VBox.margin>
+                                 <Insets bottom="5.0" right="5.0"/>
+                             </VBox.margin>
+                          </ListView>
+                      </VBox>
                   </right>
                   <left>
-                     <VBox alignment="CENTER" BorderPane.alignment="CENTER">
-                        <children>
-                           <HBox alignment="CENTER" spacing="10.0">
-                              <children>
-                                       <Label text="List of Users">
-                                           <font>
-                                               <Font name="System Bold" size="20.0" />
-                                           </font>
-                                           <HBox.margin>
-                                               <Insets />
-                                           </HBox.margin>
-                                       </Label>
-                                       <Button mnemonicParsing="false" onMouseClicked="#refreshPlayers" text="↺">
-                                           <HBox.margin>
-                                               <Insets />
-                                           </HBox.margin>
-                                           <font>
-                                               <Font size="15.0" />
-                                           </font>
-                                       </Button>
-                              </children>
+                      <VBox alignment="CENTER" BorderPane.alignment="CENTER">
+                          <HBox alignment="CENTER" spacing="10.0">
                               <VBox.margin>
-                                 <Insets bottom="5.0" top="5.0" />
+                                  <Insets bottom="5.0" top="5.0"/>
                               </VBox.margin>
-                           </HBox>
-                                <TreeView fx:id="playerTree" showRoot="false" VBox.vgrow="ALWAYS" />
-                        </children>
-                     </VBox>
-                  </left>
-                   </BorderPane>
-               </Tab>
-               <Tab fx:id="scoreUpdaterTab" closable="false" disable="true" text="Score Updater">
-                   <BorderPane prefHeight="200.0" prefWidth="200.0">
-                      <center>
-                          <VBox alignment="CENTER" prefHeight="200.0" prefWidth="100.0" BorderPane.alignment="CENTER">
-                              <Label text="Player's Scores">
+                              <Label text="List of Users">
                                   <font>
-                                      <Font name="System Bold" size="20.0" />
-                                  </font>
-                              </Label>
-                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
-                              <Label text="VRChat Name">
-                                  <font>
-                                      <Font name="System Bold" size="15.0" />
-                                  </font>
-                              </Label>
-                              <HBox alignment="CENTER" layoutX="10.0" layoutY="248.0">
-                                  <TextField fx:id="effectiveNameTextField" alignment="CENTER" promptText="VRChat Name">
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </TextField>
-                              </HBox>
-                              <Label text="Player Stats">
-                                  <font>
-                                      <Font name="System Bold" size="15.0" />
-                                  </font>
-                              </Label>
-                              <HBox alignment="CENTER">
-                                  <TextField fx:id="lossesTextField" alignment="CENTER" promptText="# of Losses">
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </TextField>
-                                  <TextField fx:id="killsTextField" alignment="CENTER" promptText="# of Kills">
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </TextField>
-                                  <TextField fx:id="performanceTextField" alignment="CENTER" promptText="# of Role Use">
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </TextField>
-                                  <TextField fx:id="leftTextField" alignment="CENTER" promptText="# of Games Left">
-                                      <HBox.margin>
-                                          <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
-                                      </HBox.margin>
-                                  </TextField>
-                              </HBox>
-                              <Label text="Player Wins">
-                                  <font>
-                                      <Font name="System Bold" size="15.0" />
-                                  </font>
-                              </Label>
-                              <HBox fx:id="winsHBox" alignment="CENTER" />
-                              <Separator opacity="0.0" orientation="VERTICAL" VBox.vgrow="ALWAYS" />
-                          </VBox>
-                      </center>
-                      <left>
-                          <TreeView fx:id="studentTreeView" showRoot="false" BorderPane.alignment="CENTER">
-                              <BorderPane.margin>
-                                  <Insets bottom="10.0" left="10.0" right="10.0" />
-                              </BorderPane.margin>
-                          </TreeView>
-                      </left>
-                      <top>
-                          <HBox alignment="CENTER" BorderPane.alignment="CENTER">
-                              <Button mnemonicParsing="false" onMouseClicked="#selectPlayer" text="Use Selected User">
-                                  <HBox.margin>
-                                      <Insets left="5.0" />
-                                  </HBox.margin>
-                              </Button>
-                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
-                              <TextField fx:id="discordNameTextField" alignment="CENTER" editable="false" promptText="Name">
-                                  <font>
-                                      <Font size="20.0" />
+                                      <Font name="System Bold" size="20.0"/>
                                   </font>
                                   <HBox.margin>
-                                      <Insets bottom="5.0" left="10.0" right="10.0" top="10.0" />
+                                      <Insets/>
                                   </HBox.margin>
-                              </TextField>
-                              <Separator opacity="0.0" HBox.hgrow="ALWAYS" />
-                              <Button mnemonicParsing="false" onMouseClicked="#updatePlayer" text="Update Info">
+                              </Label>
+                              <Button mnemonicParsing="false" onMouseClicked="#refreshPlayers" text="↺">
                                   <HBox.margin>
-                                      <Insets right="5.0" />
+                                      <Insets/>
                                   </HBox.margin>
+                                  <font>
+                                      <Font size="15.0"/>
+                                  </font>
                               </Button>
                           </HBox>
-                      </top>
+                          <ListView fx:id="userList" VBox.vgrow="ALWAYS">
+                             <VBox.margin>
+                                 <Insets bottom="5.0" left="5.0"/>
+                             </VBox.margin>
+                          </ListView>
+                      </VBox>
+                  </left>
                    </BorderPane>
                </Tab>
               <Tab closable="false" text="Dice Roll">
@@ -396,6 +267,9 @@
                            </HBox>
                        </VBox>
                    </HBox>
+               </Tab>
+               <Tab closable="false" disable="true" text="Settings (Coming Soon)">
+
                </Tab>
            </TabPane>
        </VBox>

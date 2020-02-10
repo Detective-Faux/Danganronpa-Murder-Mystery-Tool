@@ -9,12 +9,12 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest;
 import com.google.api.services.sheets.v4.model.BatchUpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.UpdateValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
@@ -28,10 +28,9 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
-import javafx.scene.input.ContextMenuEvent;
+import javafx.scene.input.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.media.Media;
 import javafx.scene.media.MediaPlayer;
@@ -64,43 +63,39 @@ import java.util.*;
 import java.util.List;
 
 public class Controller implements Initializable {
-    //--Global Items--//
+    //==Global Items==//
     public static final ArrayList<Tag> TAGS = new ArrayList<>();
     private static final ArrayList<GameMode> GAME_MODES = new ArrayList<>();
     private static final ArrayList<User> USERS = new ArrayList<>();
     private static final ArrayList<String> RESOURCES = new ArrayList<>();
     private static final ArrayList<Role> ROLES = new ArrayList<>();
+    private static final DataFormat USER_LIST = new DataFormat("UserList");
     private static SelfCredentials sc;
     private static Sheets service;
     private static JDA jda;
-    private ArrayList<TextField> customGameField = new ArrayList<>(), playerWinsFields = new ArrayList<>();
+    private ArrayList<TextField> customGameField = new ArrayList<>();
     private ArrayList<PackagedUser> packagedUsers = new ArrayList<>();
     private Timeline timer = new Timeline();
-    private PackagedUser toUpdate = null;
     private Media gong;
     private int curTime;
 
-    //--Screen Items--//
-    public TextField discordNameTextField, effectiveNameTextField, lossesTextField,
-            killsTextField, performanceTextField, leftTextField,
-            customTimeField, customRollField, standardGameField;
+    //==Screen Items==//
+    public TextField customTimeField, customRollField, standardGameField;
     public VBox customGameVBox;
-    public HBox winsHBox;
+    //private HBox winsHBox;
     public FlowPane rngFlow, timeFlow;
     public Button confirmButton;
     public ToggleButton playToggle;
-    public Tab scoreUpdaterTab;
     public ProgressBar dmProgress;
     public ContextMenu editRolesMenu;
     public MenuItem removeRoleMenuItem, updateBar;
     public Menu addRoleMenu, tagMenu;
     public TreeView<String> roleTree;
-    public TreeView<User> playerTree, playingTree, modsTree;
-    public TreeView<PackagedUser> studentTreeView;
+    //public TreeView<User> playerTree, playingTree, modsTree;
+    public ListView<User> userList, playerList, modsList;
+    //private TreeView<PackagedUser> studentTreeView;
     public ComboBox<GameMode> gamemodeBox;
     public Label rollLabel, statusLabel, timerLabel;
-
-    //TODO change the score updating page to be a game manager
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -139,7 +134,7 @@ public class Controller implements Initializable {
             //Get Credentials from file
             HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
             service = new Sheets.Builder(HTTP_TRANSPORT, Spreadsheet.JSON_FACTORY, Spreadsheet.getCredentials(HTTP_TRANSPORT)).setApplicationName("Danganronpa Client Tool").build();
-            //--List Building--//
+            //==List Building==//
             System.out.println("\nLoading Roles");
             buildList(sc.getRolesRange());
             System.out.println("Loading Players");
@@ -159,13 +154,18 @@ public class Controller implements Initializable {
         } catch (GeneralSecurityException | IOException | URISyntaxException e) {
             e.printStackTrace();
         }
+
         //Other initialisations
         gamemodeBox.getItems().addAll(GAME_MODES);
-        makePlayerTree(playerTree);
         roleTree.setRoot(new TreeItem<>());
-        playingTree.setRoot(new TreeItem<>());
-        modsTree.setRoot(new TreeItem<>());
-        studentTreeView.setRoot(new TreeItem<>());
+
+        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        ObservableList<User> list = FXCollections.observableArrayList(USERS);
+        listViewSetup(userList);
+        listViewSetup(playerList);
+        listViewSetup(modsList);
+        userList.getItems().addAll(list);
+
         //Dynamic Custom game field updates & add role Menus
         System.out.println("\nAdding Custom Fields and Updating Menus");
         for(String item: RESOURCES){
@@ -190,16 +190,6 @@ public class Controller implements Initializable {
                 add.getItems().add(role);
             }
             addRoleMenu.getItems().add(add);
-        }
-        //"Dynamic" Score Updating Fields
-        System.out.println("Fixing Scores Tab");
-        for(int x = 0; x < User.WIN_TYPES.length; x++){
-            TextField addable = new TextField();
-            addable.setPromptText("# "+ User.WIN_TYPES[x]);
-            addable.setAlignment(Pos.CENTER);
-            HBox.setMargin(addable, new Insets(0,5,0,5));
-            playerWinsFields.add(addable);
-            winsHBox.getChildren().add(addable);
         }
         //Update add tag Menu
         for(Tag item: TAGS){
@@ -275,7 +265,7 @@ public class Controller implements Initializable {
         });
     }
 
-    //--Update Spreadsheet--//
+    //==Update Spreadsheet==//
     public static void update(Member m){
         User s = new User(m);
         for(User plr : USERS) if(plr.getID().equals(s.getID())) return;
@@ -285,7 +275,7 @@ public class Controller implements Initializable {
     public static void checkNewUsers(String guild_id){
         ArrayList<User> temp = new ArrayList<>();
         boolean found = false;
-        for(Member m: jda.getGuildById(guild_id).getMembers()){
+        for(Member m: Objects.requireNonNull(jda.getGuildById(guild_id)).getMembers()){
             if(m.getUser().isBot()) continue;
             for(User s: USERS) if(s.getID().equals(m.getUser().getId())) found = true;
             if(!found) temp.add(new User(m));
@@ -308,13 +298,13 @@ public class Controller implements Initializable {
         }
     }
 
-    //--Game Stuff--//
+    //==Game Stuff==//
     public void startGame(){
         StringBuilder sb = new StringBuilder(), fileOut = new StringBuilder();
-        ArrayList<TreeItem<User>> playing = new ArrayList<>(playingTree.getRoot().getChildren());
+        ArrayList<User> playing = new ArrayList<>(playerList.getItems());
         Collections.shuffle(playing);
         //Guaranteed that both are same length
-        for(int x = 0; x < packagedUsers.size(); x++) packagedUsers.get(x).setUser(playing.get(x).getValue());
+        for(int x = 0; x < packagedUsers.size(); x++) packagedUsers.get(x).setUser(playing.get(x));
         for(PackagedUser s: packagedUsers){
             sb.setLength(0);
             sb.append("**The Ultimate ").append(s.getRole()).append("**:\n").append(s.getRole().getDescription()).append("\n\n");
@@ -327,7 +317,7 @@ public class Controller implements Initializable {
         }
 
         //Sends selected mods the list of those playing with their roles
-        for(TreeItem<User> tis: modsTree.getRoot().getChildren()) sendDM(tis.getValue().getID(), "```\n"+fileOut.toString()+"```");
+        for(User u: modsList.getItems()) sendDM(u.getID(), "```\n"+fileOut.toString()+"```");
 
         //generates file with all player's roles as backup
         try{
@@ -378,55 +368,9 @@ public class Controller implements Initializable {
             e.printStackTrace();
         }
         confirmButton.setDisable(true);
-        scoreUpdaterTab.setDisable(false);
-        TreeItem<PackagedUser> root = new TreeItem<>();
-        root.setExpanded(true);
-        for(PackagedUser s: packagedUsers) root.getChildren().add(new TreeItem<>(s));
-        studentTreeView.setRoot(root);
-    }
-    public void selectPlayer(){
-        toUpdate = studentTreeView.getSelectionModel().getSelectedItems().get(0).getValue();
-        discordNameTextField.setText(toUpdate.getUser().getName());
-        effectiveNameTextField.setText(toUpdate.getUser().getEffectiveName());
-        lossesTextField.setText(""+toUpdate.getUser().getLosses());
-        killsTextField.setText(""+toUpdate.getUser().getKills());
-        performanceTextField.setText(""+toUpdate.getUser().getPerformance());
-        leftTextField.setText(""+toUpdate.getUser().getLeft());
-        for(int x = 0; x < toUpdate.getUser().getWins().length; x++) playerWinsFields.get(x).setText(""+toUpdate.getUser().getSingleWin(x));
-    }
-    public void updatePlayer(){
-        if(toUpdate == null) return;
-        toUpdate.getUser().setEffectiveName(effectiveNameTextField.getText());
-        toUpdate.getUser().setLosses(Integer.parseInt(lossesTextField.getText()));
-        toUpdate.getUser().setKills(Integer.parseInt(killsTextField.getText()));
-        toUpdate.getUser().setPerformance(Integer.parseInt(performanceTextField.getText()));
-        toUpdate.getUser().setLeft(Integer.parseInt(leftTextField.getText()));
-        int[] newWins = new int[playerWinsFields.size()];
-        for(int x = 0; x < newWins.length; x++) newWins[x] = Integer.parseInt(playerWinsFields.get(x).getText());
-        toUpdate.getUser().setWins(newWins);
-        updatePlayerInSheet(toUpdate.getUser());
-    }
-    private void updatePlayerInSheet(User s){
-        try{
-            List<List<Object>> sheet = service.spreadsheets().values().get(sc.getSheetID(), sc.getPlayerRange()).execute().getValues(), toAppend = new ArrayList<>();
-            int index = 0;
-            for(int x = 0; x < sheet.size(); x++){
-                if(sheet.get(x).get(0).toString().equals(s.getID())){
-                    index = x;
-                    break;
-                }
-            }
-            toAppend.add(addPlayer(s));
-            final String range = "Players!A"+(2+index)+":P"+(2+index);
-            ValueRange data = new ValueRange().setValues(toAppend);
-            UpdateValuesResponse result = service.spreadsheets().values().update(sc.getSheetID(), range, data).setValueInputOption("USER_ENTERED").execute();
-            System.out.printf("\n(%d cells updated.) a user's scores were updated successfully!\n", result.getUpdatedCells());
-        } catch (IOException e){
-            e.printStackTrace();
-        }
     }
 
-    //--Dice Rolls--//
+    //==Dice Rolls==//
     public void customRNG(){
         if(fieldHasDigits(customRollField) && customRollField.getText().length() < 1) return;
         preRNG(Integer.parseInt(customRollField.getText()));
@@ -435,7 +379,7 @@ public class Controller implements Initializable {
         rollLabel.setText((x <= 0)?("0"):(Integer.toString((int) (Math.random()*x +1))));
     }
 
-    //--Countdown Timers--//
+    //==Countdown Timers==//
     public void customTimer(){
         if(fieldHasDigits(customTimeField)) startTimer(time(0, Integer.parseInt(customTimeField.getText())));
         else if(customTimeField.getText().matches("[0-9]+([:])[0-9]+")) {
@@ -479,7 +423,7 @@ public class Controller implements Initializable {
         return curTime/60+":"+((sec < 10)?("0"):(""))+sec;
     }
 
-    //--Role Generation--//
+    //==Role Generation==//
     public void customGame(){
         ArrayList<String> heir = new ArrayList<>();
         for(int x = 0; x < customGameField.size(); x++){
@@ -594,96 +538,52 @@ public class Controller implements Initializable {
         statusUpdate();
     }
 
-    //--User Building--//
+    //==User Building==//
     public void refreshPlayers(){
-        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        TreeItem<User> newRoot = new TreeItem<>();
-        for(User s: USERS) newRoot.getChildren().add(new TreeItem<>(s));
-        for(int x = 0; x < newRoot.getChildren().size(); x++){
-            for(TreeItem<User> s: playingTree.getRoot().getChildren()){
-                if(newRoot.getChildren().get(x).getValue().getID().equals(s.getValue().getID())){
-                    newRoot.getChildren().remove(x);
-                    x -= 1;
+        userList.getItems().clear();
+        userList.getItems().addAll(USERS);
+        userList.getItems().sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        ArrayList<User> rem = new ArrayList<>(modsList.getItems());
+        rem.addAll(playerList.getItems());
+        for(int i = 0; i < userList.getItems().size(); i++){
+            for(User u: rem){
+                if(userList.getItems().get(i).getID().equals(u.getID())){
+                    userList.getItems().remove(i);
+                    i-=1;
                     break;
                 }
             }
         }
-        newRoot.setExpanded(true);
-        playerTree.setRoot(newRoot);
         statusUpdate();
-    }
-    public void pushToPlaying(){
-        fromOneToAnother(playerTree, playingTree);
-    }
-    public void removeFromPlaying(){
-        fromOneToAnother(playingTree, playerTree);
-    }
-    public void addModerators(){
-        fromOneToAnother(playerTree, modsTree);
-    }
-    public void removeMods(){
-        fromOneToAnother(modsTree, playerTree);
     }
     public void popCreated(){
         //Push back
-        playerTree.getRoot().getChildren().addAll(playingTree.getRoot().getChildren());
-        playerTree.getRoot().getChildren().addAll(modsTree.getRoot().getChildren());
+        userList.getItems().addAll(modsList.getItems());
+        userList.getItems().addAll(playerList.getItems());
         //Pop remaining
-        playingTree.getRoot().getChildren().clear();
-        modsTree.getRoot().getChildren().clear();
+        playerList.getItems().clear();
+        modsList.getItems().clear();
         //Sort list and update
         refreshPlayers();
         statusUpdate();
-    }
-    private void fromOneToAnother(TreeView<User> from, TreeView<User> to){
-        ObservableList<TreeItem<User>> temp = from.getSelectionModel().getSelectedItems();
-        if(!temp.isEmpty() && !from.getRoot().getChildren().isEmpty()) {
-            to.getRoot().getChildren().addAll(temp);
-            from.getRoot().getChildren().removeAll(temp);
-        }
-        treeViewSort(from);
-        treeViewSort(to);
-        statusUpdate();
-    }
-    private void treeViewSort(TreeView<User> tree){
-        tree.getRoot().getChildren().sort(Comparator.comparing(t -> t.getValue().getEffectiveName().toLowerCase()));
-    }
-    private void makePlayerTree(TreeView<User> tree){
-        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        TreeItem<User> root = new TreeItem<>();
-        for(User s: USERS) root.getChildren().add(new TreeItem<>(s));
-        root.setExpanded(true);
-        tree.setRoot(root);
-        tree.setCellFactory(item -> {
-            TreeCell<User> treeCell = new TreeCell<User>() {
-                @Override
-                protected void updateItem(User item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (item != null && !empty) setText(item.toString());
-                    else setText("");
-                }
-            };
-            treeCell.prefWidthProperty().bind(tree.widthProperty().subtract(5.0));
-            return treeCell;
-        });
     }
     private void statusUpdate(){
         double stat = 0;
         String text = "Status: ";
         if(roleTree.getRoot().getChildren().isEmpty()) text += "(R?) ";
         else stat += 0.35;
-        if(playingTree.getRoot().getChildren().isEmpty()) text += "(P?) ";
+        if(playerList.getItems().isEmpty()) text += "(P?) ";
         else stat += 0.35;
-        if(!playingTree.getRoot().getChildren().isEmpty() && !roleTree.getRoot().getChildren().isEmpty()){
-            if(playingTree.getRoot().getChildren().size() == roleTree.getRoot().getChildren().size()) {
+        if(!playerList.getItems().isEmpty() && !roleTree.getRoot().getChildren().isEmpty()){
+            if(playerList.getItems().size() == roleTree.getRoot().getChildren().size()) {
                 text += "Ready";
                 stat += 0.3;
                 confirmButton.setDisable(false);
             }
             else {
                 text += "(Sync...)";
-                double max = Math.max(playingTree.getRoot().getChildren().size(), roleTree.getRoot().getChildren().size());
-                double temp = Math.abs(playingTree.getRoot().getChildren().size() - roleTree.getRoot().getChildren().size());
+                double max = Math.max(playerList.getItems().size(), roleTree.getRoot().getChildren().size());
+                double temp = Math.abs(playerList.getItems().size() - roleTree.getRoot().getChildren().size());
                 stat += (0.3 * (1-(temp/max)));
                 confirmButton.setDisable(true);
             }
@@ -691,10 +591,70 @@ public class Controller implements Initializable {
         else confirmButton.setDisable(true);
         statusLabel.setText(text);
         dmProgress.setProgress(stat);
-        scoreUpdaterTab.setDisable(true);
+    }
+    private void listViewSetup(ListView<User> listView){
+        listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        listView.setOnDragDetected(event -> dragDetected(event, listView));
+        listView.setOnDragDropped(event -> dragDropped(event, listView));
+        listView.setOnDragOver(event -> dragOver(event, listView));
+        listView.setOnDragDone(event -> dragDone(event, listView));
+    }
+    //--Drag And Drops--//
+    private void dragDetected(MouseEvent event, ListView<User> listView){
+        // Make sure at least one item is selected
+        int selectedCount = listView.getSelectionModel().getSelectedIndices().size();
+
+        if (selectedCount == 0) {
+            event.consume();
+            return;
+        }
+
+        // Initiate a drag-and-drop gesture
+        Dragboard dragboard = listView.startDragAndDrop(TransferMode.MOVE);
+        // Put the the selected items to the drag board
+        ArrayList<User> selectedItems = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
+
+        ClipboardContent content = new ClipboardContent();
+        content.put(USER_LIST, selectedItems);
+
+        dragboard.setContent(content);
+        event.consume();
+    }
+    private void dragOver(DragEvent event, ListView<User> listView){
+        Dragboard dragboard = event.getDragboard();
+        if (event.getGestureSource() != listView && dragboard.hasContent(USER_LIST)) event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        event.consume();
+    }
+    private void dragDropped(DragEvent event, ListView<User> listView){
+        boolean dragCompleted = false;
+        // Transfer the data to the target
+        Dragboard dragboard = event.getDragboard();
+        if(dragboard.hasContent(USER_LIST)) {
+            ArrayList<User> list = (ArrayList<User>)dragboard.getContent(USER_LIST);
+            listView.getItems().addAll(list);
+            // Data transfer is successful
+            dragCompleted = true;
+        }
+        // Data transfer is not successful
+        listView.getItems().sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        event.setDropCompleted(dragCompleted);
+        event.consume();
+    }
+    private void dragDone(DragEvent event, ListView<User> listView){
+        TransferMode tm = event.getTransferMode();
+        if (tm == TransferMode.MOVE) {
+            // Get all selected Fruits in a separate list to avoid the shared list issue
+            List<User> selectedList = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
+            // Clear the selection
+            listView.getSelectionModel().clearSelection();
+            // Remove items from the selected list
+            listView.getItems().removeAll(selectedList);
+        }
+        statusUpdate();
+        event.consume();
     }
 
-    //--Menu Bar--//
+    //==Menu Bar==//
     private void getGithub(boolean silent){
         try{
             HttpURLConnection httpCon = (HttpURLConnection) new URL("https://api.github.com/repos/"+SelfCredentials.GITHUB_REPO+"/releases/latest").openConnection();
@@ -746,7 +706,7 @@ public class Controller implements Initializable {
         }
     }
 
-    //--Helpers--//
+    //==Helpers==//
     private static List<Object> addPlayer(User s){
         return Arrays.asList(
                 s.getID(), s.getName(), s.getEffectiveName(),
@@ -782,7 +742,7 @@ public class Controller implements Initializable {
         roles.add(role);
     }
     private void sendDM(String ID, String message){
-        jda.getGuildById(sc.getGuildID()).getMemberById(ID).getUser().openPrivateChannel().queue((ch) -> ch.sendMessage(message).queue());
+        Objects.requireNonNull(Objects.requireNonNull(jda.getGuildById(sc.getGuildID())).getMemberById(ID)).getUser().openPrivateChannel().queue((ch) -> ch.sendMessage(message).queue());
     }
     private void buildList(String range){
         try {

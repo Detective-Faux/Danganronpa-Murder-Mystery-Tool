@@ -1,10 +1,14 @@
 package Danganronpa.Helpers.GameItems;
 
+import Danganronpa.Controller;
+import javafx.scene.image.Image;
 import net.dv8tion.jda.api.entities.Member;
 
+import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
 
-public class User {
+public class User implements Serializable {
     public static final String[] WIN_TYPES = new String[]{"Graduation","Mastermind","Evil","Despair","Cult","Vampire"};
     private String name, effectiveName, ID;
     private int losses, kills, performance, left;
