@@ -3,7 +3,7 @@ package Danganronpa.Helpers.GameItems;
 import java.util.List;
 
 public class Tag {
-    private String name, label, description;
+    private final String name, label, description;
 
     public Tag(){
         this("","","");
@@ -13,7 +13,7 @@ public class Tag {
         this.label = label;
         this.description = description;
     }
-    public Tag(List row){
+    public Tag(List<Object> row){
         this(row.get(0).toString(), row.get(1).toString(), row.get(2).toString());
     }
 

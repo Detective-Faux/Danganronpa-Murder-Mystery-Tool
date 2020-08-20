@@ -2,20 +2,18 @@ package Danganronpa;
 
 import Danganronpa.Helpers.Discord.Capsule;
 import Danganronpa.Helpers.GameItems.*;
-import Danganronpa.Helpers.Info.SelfCredentials;
-import Danganronpa.Helpers.Info.Spreadsheet;
-import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.BatchUpdateValuesRequest;
-import com.google.api.services.sheets.v4.model.BatchUpdateValuesResponse;
-import com.google.api.services.sheets.v4.model.ValueRange;
+import Danganronpa.Helpers.Other.LoginUtil;
+import Danganronpa.Helpers.Other.Settings;
+import Danganronpa.Helpers.Other.SimpleFunctions;
+import Danganronpa.Helpers.Other.Spreadsheet;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -39,21 +37,22 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import net.dv8tion.jda.api.AccountType;
-import net.dv8tion.jda.api.JDA;
+import javafx.util.Pair;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.Member;
+import net.dv8tion.jda.api.requests.GatewayIntent;
+import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.awt.*;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
@@ -66,23 +65,21 @@ public class Controller implements Initializable {
     //==Global Items==//
     public static final ArrayList<Tag> TAGS = new ArrayList<>();
     private static final ArrayList<GameMode> GAME_MODES = new ArrayList<>();
-    private static final ArrayList<User> USERS = new ArrayList<>();
-    private static final ArrayList<String> RESOURCES = new ArrayList<>();
-    private static final ArrayList<Role> ROLES = new ArrayList<>();
+    private static final HashMap<String, ArrayList<Role>> ROLES = new HashMap<>();
     private static final DataFormat USER_LIST = new DataFormat("UserList");
-    private static SelfCredentials sc;
-    private static Sheets service;
-    private static JDA jda;
-    private ArrayList<TextField> customGameField = new ArrayList<>();
-    private ArrayList<PackagedUser> packagedUsers = new ArrayList<>();
+    private static final Logger LOGGER = LoggerFactory.getLogger(Controller.class);
+    private static final ObservableList<Player> userList = FXCollections.observableArrayList();
+    //private static JDA jda;
+    private static Guild mainGuild;
+    private final ArrayList<TextField> customGameField = new ArrayList<>();
+    private final ArrayList<SuperRole> superRoles = new ArrayList<>();
     private Timeline timer = new Timeline();
     private Media gong;
     private int curTime;
 
     //==Screen Items==//
-    public TextField customTimeField, customRollField, standardGameField;
+    public TextField customTimeField, customRollField, standardGameField, userSearchField;
     public VBox customGameVBox;
-    //private HBox winsHBox;
     public FlowPane rngFlow, timeFlow;
     public Button confirmButton;
     public ToggleButton playToggle;
@@ -90,128 +87,176 @@ public class Controller implements Initializable {
     public ContextMenu editRolesMenu;
     public MenuItem removeRoleMenuItem, updateBar;
     public Menu addRoleMenu, tagMenu;
-    public TreeView<String> roleTree;
-    //public TreeView<User> playerTree, playingTree, modsTree;
-    public ListView<User> userList, playerList, modsList;
-    //private TreeView<PackagedUser> studentTreeView;
+    public ListView<String> roleList;
+    public ListView<Player> displayedUserList, playerList, modsList;
     public ComboBox<GameMode> gamemodeBox;
     public Label rollLabel, statusLabel, timerLabel;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
         // Build a new authorized API client service.
-        final NetHttpTransport HTTP_TRANSPORT;
         try {
-            System.out.println("Checking for Updates...");
-            getGithub(true);
-            updateBar.setOnAction(e -> getGithub(false));
-            System.out.println("Checking for config.properties file");
+            //==Github Updates==//
+            LOGGER.info("Checking for Updates...");
+            SimpleFunctions.getGithub(true);
+            updateBar.setOnAction(e -> SimpleFunctions.getGithub(false));
+
+            //==Main Settings==//
+            LOGGER.info("Checking for 'config.properties' file");
             File f = new File("./config.properties");
-            Properties config = new Properties();
             if(f.createNewFile()){
-                System.out.println("config.properties file not found...\nCreating new config.properties file");
-                for(int x = 0; x < SelfCredentials.CONFIG_FIELDS.length; x++) config.setProperty(SelfCredentials.CONFIG_FIELDS[x], SelfCredentials.CONFIG_DEFAULTS[x]);
-                while (config.getProperty(SelfCredentials.CONFIG_FIELDS[0],SelfCredentials.CONFIG_DEFAULTS[0]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[1],SelfCredentials.CONFIG_DEFAULTS[1]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[2],SelfCredentials.CONFIG_DEFAULTS[2]).equals("")){
-                    quarryInfoAlert(config);
-                }
-                config.store(new FileOutputStream(f),null);
+                LOGGER.warn("Couldn't find the `config.properties` file... New file will be created.");
+                for(int x = 0; x < Settings.FIELDS.length; x++) Settings.getInst().getConfig().setProperty(Settings.FIELDS[x], "");
+                while (Settings.getInst().getConfig().getProperty(Settings.FIELDS[0],"").equals("")) quarryInfoAlert();
+                Settings.getInst().getConfig().store(new FileOutputStream(f),null);
             }
             else {
-                System.out.println("config.properties file found!");
-                config.load(new FileInputStream(f));
-                for(int x = 0; x < SelfCredentials.CONFIG_FIELDS.length; x++){
-                    if(config.getProperty(SelfCredentials.CONFIG_FIELDS[x]) == null) config.setProperty(SelfCredentials.CONFIG_FIELDS[x], SelfCredentials.CONFIG_DEFAULTS[x]);
+                LOGGER.info("Found the 'config.properties' file!");
+                Settings.getInst().getConfig().load(new FileInputStream(f));
+                for(int x = 0; x < Settings.FIELDS.length; x++){
+                    if(Settings.getInst().getProperty(Settings.FIELDS[x]) == null) Settings.getInst().getConfig().setProperty(Settings.FIELDS[x], "");
                 }
-                while (config.getProperty(SelfCredentials.CONFIG_FIELDS[0],SelfCredentials.CONFIG_DEFAULTS[0]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[1],SelfCredentials.CONFIG_DEFAULTS[1]).equals("") || config.getProperty(SelfCredentials.CONFIG_FIELDS[2],SelfCredentials.CONFIG_DEFAULTS[2]).equals("")) {
-                    System.out.println("config.properties file is missing critical information!!");
-                    quarryInfoAlert(config);
-                    config.store(new FileOutputStream(f), null);
+                while (Settings.getInst().getProperty(Settings.FIELDS[0],"").equals("")) {
+                    LOGGER.warn("config.properties file is missing critical information!!");
+                    quarryInfoAlert();
+                    Settings.getInst().getConfig().store(new FileOutputStream(f), null);
                 }
             }
-            sc = new SelfCredentials(config);
-            System.out.println();
 
-            //Get Credentials from file
-            HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-            service = new Sheets.Builder(HTTP_TRANSPORT, Spreadsheet.JSON_FACTORY, Spreadsheet.getCredentials(HTTP_TRANSPORT)).setApplicationName("Danganronpa Client Tool").build();
+            //==Sheet Settings==//
+            LOGGER.info("Accessing Settings");
+            List<List<Object>> sheetVals = Spreadsheet.getInstance().getRange(Settings.getInst().getSettingsRange(),"COLUMNS");
+            if(sheetVals.isEmpty()) {
+                LOGGER.error("No Spreadsheet Settings Found!");
+                System.exit(0);
+            }
+            Settings.getInst().addSettings(sheetVals.get(0));
+
+            //==User Login==//
+            LOGGER.info("Accessing Login Information");
+            buildList(Settings.getInst().getLoginRange(), "Hosts");
+            while (true) {
+                if(Settings.getInst().getUsername().equals("") || Settings.getInst().getPassword().equals("")) {
+                    login();
+                    Settings.getInst().getConfig().store(new FileOutputStream(f), null);
+                }
+                //If Login Correct and User was gathered from spreadsheet
+                if(LoginUtil.getInst().isUsernameTaken(Settings.getInst().getUsername())) {
+                    if(!LoginUtil.getInst().isLoginCorrect(Settings.getInst().getUsername(), Settings.getInst().getPassword())) {
+                        Settings.getInst().setPassword("");
+                        LOGGER.warn("Username or Password is incorrect...");
+                    }
+                    else break;
+                }
+                //Register User Otherwise
+                else {
+                    LoginUtil.getInst().registerUser(Settings.getInst().getUsername(), Settings.getInst().getPassword());
+                    Spreadsheet.getInstance().appendSpreadsheet("Login",Collections.singletonList(LoginUtil.getInst().getUserAsList(Settings.getInst().getUsername())));
+                    LOGGER.info("New Login Created; Awaiting Approval!");
+                    break;
+                }
+            }
+            if(!LoginUtil.getInst().isUserActiveHost(Settings.getInst().getUsername())) {
+                LOGGER.error("You have not been set as an active user by the Spreadsheet host");
+                SimpleFunctions.createBasicAlert(Settings.getInst().getLogo(), Alert.AlertType.WARNING,"New Account Detected",
+                        "Your account HAS NOT been approved yet!",
+                        "Please contact the spreadsheet host before using the DMMT!").showAndWait();
+                System.exit(0);
+            }
+
             //==List Building==//
-            System.out.println("\nLoading Roles");
-            buildList(sc.getRolesRange());
-            System.out.println("Loading Players");
-            buildList(sc.getPlayerRange());
-            System.out.println("Loading Tags");
-            buildList(sc.getTagsRange());
-            System.out.println("Loading Game Modes");
-            buildList(sc.getGameModeRange());
-            //Setup the bot
-            System.out.println("Booting Discord...\n");
-            jda = new JDABuilder(AccountType.BOT).setToken(sc.getDiscordToken())
-                    .setBulkDeleteSplittingEnabled(false).setAutoReconnect(true)
-                    .addEventListeners(new Capsule(sc.getGuildID(),sc.getPrefix()))
-                    .setActivity(Activity.watching("your every move...")).build();
-            //Audio
+            buildList(Settings.getInst().getRolesRange(),"Roles");
+            buildList(Settings.getInst().getTagsRange(),"Tags");
+            buildList(Settings.getInst().getGameModeRange(),"Game Modes");
+
+            //==Discord Setup==// (Updated for JDA 4.2.0)
+            LOGGER.info("Booting Discord...");
+            JDABuilder.createDefault(Settings.getInst().getDiscordToken(), GatewayIntent.GUILD_MEMBERS, GatewayIntent.GUILD_MESSAGES,
+                    GatewayIntent.GUILD_VOICE_STATES, GatewayIntent.GUILD_EMOJIS, GatewayIntent.GUILD_BANS, GatewayIntent.GUILD_INVITES,
+                    GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.DIRECT_MESSAGES)
+            .setBulkDeleteSplittingEnabled(false).setAutoReconnect(true).addEventListeners(new Capsule())
+            .setMemberCachePolicy(MemberCachePolicy.ALL).setActivity(Activity.watching("over "+ Settings.getInst().getUsername()+"'s class..."))
+            .build();
+            //==Audio==//
             gong = new Media(Main.class.getResource("/Media/timer.wav").toURI().toString());
         } catch (GeneralSecurityException | IOException | URISyntaxException e) {
-            e.printStackTrace();
+            LOGGER.error("Exception in 'Initialize' Method");
         }
 
-        //Other initialisations
+        //==Other Initialisations==//
         gamemodeBox.getItems().addAll(GAME_MODES);
-        roleTree.setRoot(new TreeItem<>());
+        FilteredList<Player> filteredUserList = new FilteredList<>(userList, s -> true);
+        SortedList<Player> sortedUserList = new SortedList<>(filteredUserList, Comparator.comparing(t -> t.getPreferredName().toLowerCase()));
+        displayedUserList.setItems(sortedUserList);
+        listViewSetup(displayedUserList, false);
+        listViewSetup(playerList, true);
+        listViewSetup(modsList, true);
+        //Search Bar
+        userSearchField.textProperty().addListener((observable, oldVal, newVal) -> filteredUserList.setPredicate(i -> {
+            //Zero case
+            if (newVal == null || newVal.isEmpty()) return true;
+            //Test Cases (separate as more if's if needed)
+            if (i.getName().toUpperCase().contains(newVal.toUpperCase())) return true;
+            return i.getPreferredName().toUpperCase().contains(newVal.toUpperCase());
+        }));
 
-        USERS.sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        ObservableList<User> list = FXCollections.observableArrayList(USERS);
-        listViewSetup(userList);
-        listViewSetup(playerList);
-        listViewSetup(modsList);
-        userList.getItems().addAll(list);
-
-        //Dynamic Custom game field updates & add role Menus
-        System.out.println("\nAdding Custom Fields and Updating Menus");
-        for(String item: RESOURCES){
+        //==Dynamic Game Fields & Role Menus==//
+        LOGGER.info("Adding Custom Fields and Updating Menus");
+        Object[] cate = ROLES.keySet().toArray();
+        Arrays.sort(cate);
+        for(Object item: cate){
             //Custom game Fields
             TextField addable = new TextField();
-            addable.setPromptText("# "+item+((item.equals("Chain"))?(" Pairs"):("")));
+            addable.setPromptText("# "+item.toString());
             addable.setFont(new Font(15));
             addable.setAlignment(Pos.CENTER);
             VBox.setMargin(addable, new Insets(2,10,2,0));
             customGameField.add(addable);
             customGameVBox.getChildren().add(customGameVBox.getChildren().size()-2,addable);
             //Role Menus
-            Menu add = new Menu(item);
+            Menu add = new Menu(item.toString());
             add.setMnemonicParsing(false);
-            ArrayList<Role> roles = Objects.requireNonNull(getSubArray(item, ROLES, false));
+            ArrayList<Role> roles = ROLES.get(item.toString());
             for(int x = 0; x < roles.size(); x++){
                 int cur = x;
                 MenuItem role = new MenuItem(roles.get(x).toString());
                 role.setMnemonicParsing(false);
-                if(item.equals("Chain")) role.setOnAction(event -> menuAddRole(roles.get(cur), roles.get((cur%2 == 0)?(cur+1):(cur-1))));
-                else role.setOnAction(event -> menuAddRole(roles.get(cur)));
+                role.setOnAction(event -> menuAddRole(roles.get(cur)));
                 add.getItems().add(role);
             }
             addRoleMenu.getItems().add(add);
         }
-        //Update add tag Menu
+
+        //==Tag Menu==//
         for(Tag item: TAGS){
             MenuItem add = new MenuItem(item.toString());
             add.setOnAction(event -> menuAddTag(item));
             tagMenu.getItems().add(add);
         }
-        //Repeating Buttons
-        System.out.println("Building Buttons");
+        //Clear option
+        MenuItem clear = new MenuItem("Clear");
+        clear.setOnAction(event -> menuRemoveTag());
+        tagMenu.getItems().add(clear);
+
+        //==Repeating Buttons==//
+        LOGGER.info("Building Buttons");
         buildButtons("RNG", rngFlow, 4,6,8,10,12,20);
         buildButtons("TIME", timeFlow, 1,2,4,6,8,10);
-        //Clear tag
-        MenuItem add = new MenuItem("Clear");
-        add.setOnAction(event -> menuAddTag(new Tag()));
-        tagMenu.getItems().add(add);
+
+        //==Finalise==//
         statusUpdate();
-        System.out.println("Finished Initialisation\n");
+        LOGGER.info("Waiting for Discord Connection...");
     }
-    private void quarryInfoAlert(Properties config) {
+    public static void afterDiscordStartup(Guild guild) {
+        mainGuild = guild;
+        buildList(Settings.getInst().getPlayerRange(), "Players");
+        checkNewUsers();
+        LOGGER.info("Finished Initialization");
+    }
+    private void quarryInfoAlert() {
         // Create the custom dialog.
-        Dialog<ArrayList<String>> dialog = new Dialog<>();
-        dialog.setTitle("First Run Setup");
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle("First Run Setup: Spreadsheet ID");
         dialog.setHeaderText("Please enter the following credentials for the program to run");
         dialog.initModality(Modality.APPLICATION_MODAL);
 
@@ -222,105 +267,140 @@ public class Controller implements Initializable {
         ButtonType loginButtonType = new ButtonType("Confirm", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().add(loginButtonType);
 
+        TextField sheetID = new TextField();
+        sheetID.setPromptText("sheetID");
+        sheetID.setText(Settings.getInst().getProperty("sheetID"));
+
         // Create the username and password labels and fields.
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
+        grid.setHgap(10); grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
-
-        TextField serverID = new TextField(), sheetID = new TextField();
-        serverID.setPromptText("guildID");
-        serverID.setText(config.getProperty("guildID"));
-        sheetID.setPromptText("sheetID");
-        sheetID.setText(config.getProperty("sheetID"));
-        PasswordField botID = new PasswordField();
-        botID.setPromptText("discordToken");
-        botID.setText(config.getProperty("discordToken"));
-
-        grid.add(new Label("Google Sheet ID:"), 0, 0);
-        grid.add(sheetID, 1, 0);
-        grid.add(new Label("Discord Server ID:"),0,1);
-        grid.add(serverID, 1, 1);
-        grid.add(new Label("Bot Token:"), 0, 2);
-        grid.add(botID, 1, 2);
+        grid.add(new Label("Google Sheet ID:"),0,0); grid.add(sheetID,1,0);
 
         // Enable/Disable login button depending on whether a username was entered.
         Node loginButton = dialog.getDialogPane().lookupButton(loginButtonType);
         loginButton.setDisable(true);
 
         // Do some validation (using the Java 8 lambda syntax).
-        serverID.textProperty().addListener((observable, oldValue, newValue) -> loginButton.setDisable(newValue.trim().isEmpty()));
+        sheetID.textProperty().addListener((observable, oldValue, newValue) -> loginButton.setDisable(newValue.trim().isEmpty()));
         dialog.getDialogPane().setContent(grid);
 
         // Request focus on the username field by default.
-        Platform.runLater(serverID::requestFocus);
+        Platform.runLater(sheetID::requestFocus);
 
         // Convert the result to a username-password-pair when the login button is clicked.
-        dialog.setResultConverter(dialogButton -> ((dialogButton == loginButtonType)?(new ArrayList<>(Arrays.asList(serverID.getText(), sheetID.getText(), botID.getText()))):(null)));
+        dialog.setResultConverter(dialogButton -> (dialogButton == loginButtonType)?sheetID.getText():null);
+        dialog.showAndWait().ifPresent(ret -> Settings.getInst().setSheetID(ret));
+    }
+    private void login(){
+        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("First Run Setup: Login Information");
+        dialog.setHeaderText("Login or Register an account to access the spreadsheet:");
+        dialog.initModality(Modality.APPLICATION_MODAL);
 
+        Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+        stage.getIcons().add(new Image(this.getClass().getResource("/Media/logo.png").toString()));
+
+        // Set the button types.
+        ButtonType loginButtonType = new ButtonType("Login", ButtonBar.ButtonData.OK_DONE),
+        registerButtonType = new ButtonType("Register", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, registerButtonType);
+
+        // Create the username and password labels and fields.
+        TextField username = new TextField();
+        PasswordField password = new PasswordField();
+        username.setPromptText("username"); username.setText(Settings.getInst().getUsername());
+        password.setPromptText("password"); password.setText(Settings.getInst().getPassword());
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10); grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        grid.add(new Label("Username:"),0,0); grid.add(username,1,0);
+        grid.add(new Label("Password:"),0,1); grid.add(password,1,1);
+
+        // Enable/Disable login button depending on whether a username was entered.
+        Node loginButton = dialog.getDialogPane().lookupButton(loginButtonType),
+             registerButton = dialog.getDialogPane().lookupButton(registerButtonType);
+        boolean toggle = LoginUtil.getInst().isUsernameTaken(username.getText());
+        loginButton.setDisable(!toggle); registerButton.setDisable(toggle);
+
+        // Do some validation (using the Java 8 lambda syntax).
+        username.textProperty().addListener((observable, oldValue, newValue) -> {
+            if(LoginUtil.getInst().isUsernameTaken(newValue)){
+                registerButton.setDisable(true);
+                loginButton.setDisable(false);
+            }
+            else {
+                registerButton.setDisable(oldValue.trim().isEmpty() || newValue.trim().isEmpty());
+                loginButton.setDisable(true);
+            }
+        });
+        dialog.getDialogPane().setContent(grid);
+
+        // Request focus on the username field by default.
+        Platform.runLater(username::requestFocus);
+
+        // Convert the result to a username-password-pair when the login button is clicked.
+        dialog.setResultConverter(b -> (b == registerButtonType || b == loginButtonType)? new Pair<>(username.getText(), password.getText()) : null);
         dialog.showAndWait().ifPresent(ret -> {
-            config.setProperty("guildID",ret.get(0));
-            config.setProperty("sheetID",ret.get(1));
-            config.setProperty("discordToken",ret.get(2));
+            Settings.getInst().setUsername(ret.getKey());
+            Settings.getInst().setPassword(ret.getValue());
         });
     }
 
     //==Update Spreadsheet==//
     public static void update(Member m){
-        User s = new User(m);
-        for(User plr : USERS) if(plr.getID().equals(s.getID())) return;
-        USERS.add(s);
-        updateSheet(s);
+        Player s = new Player(m);
+        for(Player plr : userList) if(plr.getID().equals(s.getID())) return;
+        userList.add(s);
+        Spreadsheet.getInstance().appendSpreadsheet("Players", Collections.singletonList(s.getPlayerSheetVariable()));
+        LOGGER.info("A new user joined just joined the server! They have been added to the user list!");
     }
-    public static void checkNewUsers(String guild_id){
-        ArrayList<User> temp = new ArrayList<>();
-        boolean found = false;
-        for(Member m: Objects.requireNonNull(jda.getGuildById(guild_id)).getMembers()){
-            if(m.getUser().isBot()) continue;
-            for(User s: USERS) if(s.getID().equals(m.getUser().getId())) found = true;
-            if(!found) temp.add(new User(m));
+    public static void checkNewUsers(){
+        boolean found;
+        ArrayList<Player> temp = new ArrayList<>();
+        for(Member m: mainGuild.getMembers()){
             found = false;
+            if(m.getUser().isBot()) continue;
+            for(Player s: userList) {
+                if(s.getID().equals(m.getId())) {
+                    found = true;
+                    break;
+                }
+            }
+            if(!found) temp.add(new Player(m));
         }
         if(temp.isEmpty()) return;
-        USERS.addAll(temp);
-        updateSheet(temp.toArray(new User[0]));
-    }
-    private static void updateSheet(User... newUsers){
-        try{
-            List<List<Object>> sheet = service.spreadsheets().values().get(sc.getSheetID(), sc.getPlayerRange()).execute().getValues(), toAppend = new ArrayList<>();
-            for(User s: newUsers) toAppend.add(addPlayer(s));
-            List<ValueRange> data = new ArrayList<ValueRange>() {{ add(new ValueRange().setRange("Players!A" + (2 + sheet.size()) + ":P").setValues(toAppend));}};
-            BatchUpdateValuesRequest body = new BatchUpdateValuesRequest().setValueInputOption("USER_ENTERED").setData(data);
-            BatchUpdateValuesResponse result = service.spreadsheets().values().batchUpdate(sc.getSheetID(), body).execute();
-            System.out.printf("\n(%d cells updated.) %d new users joined the killing game!\n", result.getTotalUpdatedCells(), toAppend.size());
-        } catch (IOException e){
-            e.printStackTrace();
-        }
+        userList.addAll(temp);
+        List<List<Object>> toAppend = new ArrayList<>();
+        for(Player s: temp) toAppend.add(s.getPlayerSheetVariable());
+        Spreadsheet.getInstance().appendSpreadsheet("Players", toAppend);
+        LOGGER.info("{} new users have been added to the user list!", toAppend.size());
     }
 
     //==Game Stuff==//
     public void startGame(){
-        StringBuilder sb = new StringBuilder(), fileOut = new StringBuilder();
-        ArrayList<User> playing = new ArrayList<>(playerList.getItems());
+        StringBuilder fileOut = new StringBuilder();
+        ArrayList<Player> playing = new ArrayList<>(playerList.getItems());
         Collections.shuffle(playing);
         //Guaranteed that both are same length
-        for(int x = 0; x < packagedUsers.size(); x++) packagedUsers.get(x).setUser(playing.get(x));
+        ArrayList<PackagedUser> packagedUsers = new ArrayList<>();
+        for(int x = 0; x < playing.size(); x++) packagedUsers.add(new PackagedUser(playing.get(x), superRoles.get(x)));
         for(PackagedUser s: packagedUsers){
-            sb.setLength(0);
-            sb.append("**The Ultimate ").append(s.getRole()).append("**:\n").append(s.getRole().getDescription()).append("\n\n");
-            for(Tag t: s.getTags()) {
-                if(!t.isEmpty()) sb.append("**").append(t.getName()).append("**:\n").append(t.getDescription()).append("\n\n");
+            sendDM(s.getUser(),"**"+Settings.getInst().getRoleTitlePrefix()+" "+s.getSuperRole().getRole()+"**:\n"+s.getSuperRole().getRole().getDescription());
+            for(Tag t: s.getSuperRole().getTags()) {
+                if(!t.isEmpty()) sendDM(s.getUser(),"**"+t.getName()+"**:\n"+t.getDescription());
             }
-            sb.append("*Questions and Answers*:\nIf you have any questions about your role, please come ask one of your moderators!");
+            sendDM(s.getUser(),Settings.getInst().getExtraMessage());
             fileOut.append(s.toString()).append("\r\n");
-            sendDM(s.getID(), sb.toString());
+            updateUser(s.getUser());
         }
 
         //Sends selected mods the list of those playing with their roles
-        for(User u: modsList.getItems()) sendDM(u.getID(), "```\n"+fileOut.toString()+"```");
+        for(Player u: modsList.getItems()) sendDM(u, "```\n"+fileOut.toString()+"```");
 
         //generates file with all player's roles as backup
-        try{
+        try {
             String[] headerText = new String[]{"Here?","User Name","Tag","Role","Extra Notes","","Day 1","Day 2","Day 3","Day 4","Day 5","Day 6","Day 7","Day 8"};
             FileOutputStream output = new FileOutputStream(new File("./Game.xls").getAbsoluteFile());
             HSSFWorkbook workbook = new HSSFWorkbook();
@@ -349,8 +429,8 @@ public class Controller implements Initializable {
                 String[] data = new String[]{
                         "✓",
                         packagedUsers.get(x).getUser().toString(),
-                        packagedUsers.get(x).getFullTagsAsString(),
-                        packagedUsers.get(x).getRole().toString()
+                        packagedUsers.get(x).getSuperRole().getFullTagsAsString(),
+                        packagedUsers.get(x).getSuperRole().getRole().toString()
                 };
                 for(int y = 0; y < data.length;  y++){
                     Cell created = row.createCell(y);
@@ -363,34 +443,29 @@ public class Controller implements Initializable {
             workbook.write(output);
             output.close();
             workbook.close();
-            System.out.println("\nSpreadsheet Created\n");
+            LOGGER.info("Spreadsheet Created");
         } catch(IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Exception in 'StartGame' Method");
         }
         confirmButton.setDisable(true);
     }
-
-    //==Dice Rolls==//
     public void customRNG(){
-        if(fieldHasDigits(customRollField) && customRollField.getText().length() < 1) return;
-        preRNG(Integer.parseInt(customRollField.getText()));
-    }
-    private void preRNG(int x){
-        rollLabel.setText((x <= 0)?("0"):(Integer.toString((int) (Math.random()*x +1))));
+        if(!SimpleFunctions.fieldHasDigits(customRollField)) customRollField.setText("0");
+        rollLabel.setText(SimpleFunctions.rollTheDice(Integer.parseInt(customRollField.getText())));
     }
 
     //==Countdown Timers==//
     public void customTimer(){
-        if(fieldHasDigits(customTimeField)) startTimer(time(0, Integer.parseInt(customTimeField.getText())));
+        if(SimpleFunctions.fieldHasDigits(customTimeField)) startTimer(SimpleFunctions.getTimeInSeconds(0, Integer.parseInt(customTimeField.getText())));
         else if(customTimeField.getText().matches("[0-9]+([:])[0-9]+")) {
             String[] items = customTimeField.getText().split(":");
-            startTimer(time(Integer.parseInt(items[0]), Integer.parseInt(items[1])));
+            startTimer(SimpleFunctions.getTimeInSeconds(Integer.parseInt(items[0]), Integer.parseInt(items[1])));
         }
     }
     public void stopTimer(){
         timer.stop();
         curTime = 0;
-        timerLabel.setText(displayTime());
+        timerLabel.setText(SimpleFunctions.displayTime(curTime));
         pauseResumeTimer();
     }
     public void pauseResumeTimer(){
@@ -405,185 +480,137 @@ public class Controller implements Initializable {
         if(timer.getStatus() == Animation.Status.RUNNING) timer.stop();
         MediaPlayer timeEnd = new MediaPlayer(gong);
         timeEnd.setVolume(0.5);
-        timerLabel.setText(displayTime());
+        timerLabel.setText(SimpleFunctions.displayTime(curTime));
         timer = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
             if(curTime-- == 1) timeEnd.play();
-            timerLabel.setText(displayTime());
+            timerLabel.setText(SimpleFunctions.displayTime(curTime));
         }));
         timer.setCycleCount(timeSec);
-    }
-    private int time(int minutes){
-        return time(minutes, 0);
-    }
-    private int time(int minutes, int seconds){
-        return minutes*60 + seconds;
-    }
-    private String displayTime(){
-        int sec = curTime%60;
-        return curTime/60+":"+((sec < 10)?("0"):(""))+sec;
     }
 
     //==Role Generation==//
     public void customGame(){
         ArrayList<String> heir = new ArrayList<>();
-        for(int x = 0; x < customGameField.size(); x++){
-            if(!fieldHasDigits(customGameField.get(x))) continue;
-            ArrayList<Role> size = getSubArray(RESOURCES.get(x), ROLES,false);
-            if(size == null) continue;
-            int len = Integer.parseInt(customGameField.get(x).getText())*((x == 0)?(2):(1));
-            if(len > size.size()){
+        for (TextField curField : customGameField) {
+            if (!SimpleFunctions.fieldHasDigits(curField)) continue;
+            ArrayList<Role> size = ROLES.get(curField.getPromptText().substring(2));
+            if (size == null) continue;
+            int len = Integer.parseInt(curField.getText());
+            if (len > size.size()) {//if overflow
                 len = size.size();
-                customGameField.get(x).setText(""+size.size());
+                curField.setText(len + "");
             }
-            for(int y = 0; y < len; y++) heir.add(RESOURCES.get(x));
+            //Build exact length Hierarchy
+            for (int y = 0; y < len; y++) heir.add(curField.getPromptText().substring(2));
         }
         startGenerate(heir.size(), heir);
     }
     public void standardGame(){
         int len = 12;
-        if(fieldHasDigits(standardGameField)) len = Integer.parseInt(standardGameField.getText());
+        if(SimpleFunctions.fieldHasDigits(standardGameField)) len = Integer.parseInt(standardGameField.getText());
         else standardGameField.setText(""+len);
-        startGenerate(len, new ArrayList<>(Arrays.asList(sc.getHierarchy())));
+        startGenerate(len, new ArrayList<>(Arrays.asList(Settings.getInst().getHierarchy())));
     }
     public void clearRoles(){
-        roleTree.getRoot().getChildren().clear();
-        packagedUsers.clear();
+        roleList.getItems().clear();
+        superRoles.clear();
         statusUpdate();
     }
     public void menuRequest(ContextMenuEvent event){
-        editRolesMenu.show(roleTree, event.getScreenX(), event.getScreenY());
-        removeRoleMenuItem.setDisable(roleTree.getSelectionModel().isEmpty());
-        tagMenu.setDisable(roleTree.getSelectionModel().isEmpty());
+        editRolesMenu.show(roleList, event.getScreenX(), event.getScreenY());
+        removeRoleMenuItem.setDisable(roleList.getSelectionModel().isEmpty());
+        tagMenu.setDisable(roleList.getSelectionModel().isEmpty());
         event.consume();
     }
     public void menuRemoveRole(){
-        packagedUsers.remove(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
-        roleTree.getRoot().getChildren().remove(roleTree.getSelectionModel().getSelectedItem());
+        superRoles.remove(roleList.getItems().indexOf(roleList.getSelectionModel().getSelectedItem()));
+        roleList.getItems().remove(roleList.getSelectionModel().getSelectedItem());
         statusUpdate();
     }
     private void startGenerate(int len, ArrayList<String> hierarchy){
         if(gamemodeBox.getValue() == null) gamemodeBox.setValue(GAME_MODES.get(0));
         if(len < gamemodeBox.getValue().getCalculatedTagsSize(len)) return;
-        if(len > 0 && len <= ROLES.size()) generateGame(hierarchy, len, gamemodeBox.getValue().performActions(len));
+        if(len > 0 && len <= ROLES.get("All").size()) generateGame(hierarchy, len, gamemodeBox.getValue().performActions(len));
     }
     private void generateGame(ArrayList<String> heir, int n, ArrayList<Tag> tags){
-        packagedUsers.clear();
-        ArrayList<Role> roleSelection = new ArrayList<>(), tempHolder = freshCopy();
+        superRoles.clear();
+        ArrayList<Role> roleSelection = new ArrayList<>();
         for(int ran, x = 0; x < n; x++) {
-            ArrayList<Role> sub;
-            String type = heir.get(x%heir.size());
-            //Sub Array of tempHolder to get the list withing the category
-            if(type.equals("Chain") && n - x <=1){
-                type = "Random";
-                sub = getSubArray("Chain", tempHolder, true);
+            String type = heir.get(x%heir.size()); //Loop through hierarchy order.
+            if(ROLES.get(type) == null) {
+                LOGGER.error("Error in Role Types. Is the hierarchy up to date?");
+                return;
             }
-            else sub = getSubArray(type , tempHolder, false);
-            if(sub == null) continue;
-            //Add to list
+            ArrayList<Role> sub = ROLES.get(type);
+            //Pick Random role from category
             ran = (int)(Math.random()*sub.size());
-            addRole(roleSelection, tempHolder, sub.get(ran));
-            //case for chain
-            if(type.equals("Chain")){
-                addRole(roleSelection, tempHolder, sub.get((ran%2 == 0)?(ran+1):(ran-1)));
-                x++;
-            }
+            roleSelection.add(sub.get(ran));
         }
         //Create Students
         Collections.shuffle(tags);
         for(int x = 0; x < n; x++){
-            if(tags.get(x).getName().equals("")) packagedUsers.add(new PackagedUser(roleSelection.get(x)));
-            else packagedUsers.add(new PackagedUser(roleSelection.get(x),tags.get(x)));
+            if(tags.get(x).getName().equals("")) superRoles.add(new SuperRole(roleSelection.get(x)));
+            else superRoles.add(new SuperRole(roleSelection.get(x),tags.get(x)));
         }
 
         //Generate Tree
-        TreeItem<String> root = new TreeItem<>();
-        for(PackagedUser s : packagedUsers) {
-            TreeItem<String> temp = makeBranch(s.getTagsAsString()+s.getRole() ,root);
-            makeBranch(s.getRole().getDescription(), temp);
-        }
-        root.setExpanded(true);
-        roleTree.setRoot(root);
-        roleTree.setCellFactory(item -> {
-            TreeCell<String> treeCell = new TreeCell<String>() {
-                @Override
-                protected void updateItem(String item, boolean empty) {
-                    super.updateItem(item, empty);
-                    if (item != null && !empty) setText(item);
-                    else setText("");
-                }
-            };
-            treeCell.prefWidthProperty().bind(roleTree.widthProperty().subtract(5.0));
-            return treeCell;
-        });
+        roleList.getItems().clear();
+        for(SuperRole s: superRoles) roleList.getItems().add(s.getTagsAsString()+s.getRole());
         statusUpdate();
-    }
-    private TreeItem<String> makeBranch(String title, TreeItem<String> parent){
-        TreeItem<String> temp = new TreeItem<>(title);
-        parent.getChildren().add(temp);
-        return temp;
     }
     private void menuAddRole(Role...roles){
         for(Role r: roles){
-            TreeItem<String> temp = makeBranch(r.toString(), roleTree.getRoot());
-            makeBranch(r.getDescription(),temp);
-            packagedUsers.add(new PackagedUser(r));
+            /*TreeItem<String> temp = makeBranch(r.toString(), roleTree.getRoot());
+            makeBranch(r.getDescription(),temp);*/
+            SuperRole p = new SuperRole(r);
+            superRoles.add(p);
+            roleList.getItems().add(p.getTagsAsString()+p.getRole());
         }
         if(gamemodeBox.getValue() == null || !gamemodeBox.getValue().getName().equals("Custom")) gamemodeBox.setValue(gamemodeBox.getItems().get(gamemodeBox.getItems().size()-1));
         statusUpdate();
     }
     private void menuAddTag(Tag t){
-        PackagedUser s = packagedUsers.get(roleTree.getRoot().getChildren().indexOf(roleTree.getSelectionModel().getSelectedItem()));
-        s.addTag(t);
-        roleTree.getSelectionModel().getSelectedItem().setValue(s.getTagsAsString()+s.getRole());
+        SuperRole s = superRoles.get(roleList.getItems().indexOf(roleList.getSelectionModel().getSelectedItem()));
+        s.addTags(t);
+        roleList.getItems().set(roleList.getSelectionModel().getSelectedIndex(), s.getTagsAsString()+s.getRole());
+        statusUpdate();
+    }
+    private void menuRemoveTag(){
+        SuperRole s = superRoles.get(roleList.getItems().indexOf(roleList.getSelectionModel().getSelectedItem()));
+        s.getTags().clear();
+        roleList.getItems().set(roleList.getSelectionModel().getSelectedIndex(), s.getTagsAsString()+s.getRole());
         statusUpdate();
     }
 
     //==User Building==//
-    public void refreshPlayers(){
-        userList.getItems().clear();
-        userList.getItems().addAll(USERS);
-        userList.getItems().sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
-        ArrayList<User> rem = new ArrayList<>(modsList.getItems());
-        rem.addAll(playerList.getItems());
-        for(int i = 0; i < userList.getItems().size(); i++){
-            for(User u: rem){
-                if(userList.getItems().get(i).getID().equals(u.getID())){
-                    userList.getItems().remove(i);
-                    i-=1;
-                    break;
-                }
-            }
-        }
-        statusUpdate();
-    }
-    public void popCreated(){
+    public void clearCreated(){
         //Push back
-        userList.getItems().addAll(modsList.getItems());
-        userList.getItems().addAll(playerList.getItems());
+        userList.addAll(modsList.getItems());
+        userList.addAll(playerList.getItems());
         //Pop remaining
         playerList.getItems().clear();
         modsList.getItems().clear();
         //Sort list and update
-        refreshPlayers();
+        userSearchField.clear();
         statusUpdate();
     }
     private void statusUpdate(){
         double stat = 0;
         String text = "Status: ";
-        if(roleTree.getRoot().getChildren().isEmpty()) text += "(R?) ";
+        if(roleList.getItems().isEmpty()) text += "(R?) ";
         else stat += 0.35;
         if(playerList.getItems().isEmpty()) text += "(P?) ";
         else stat += 0.35;
-        if(!playerList.getItems().isEmpty() && !roleTree.getRoot().getChildren().isEmpty()){
-            if(playerList.getItems().size() == roleTree.getRoot().getChildren().size()) {
+        if(!playerList.getItems().isEmpty() && !roleList.getItems().isEmpty()){
+            if(playerList.getItems().size() == roleList.getItems().size()) {
                 text += "Ready";
                 stat += 0.3;
                 confirmButton.setDisable(false);
             }
             else {
-                text += "(Sync...)";
-                double max = Math.max(playerList.getItems().size(), roleTree.getRoot().getChildren().size());
-                double temp = Math.abs(playerList.getItems().size() - roleTree.getRoot().getChildren().size());
+                double max = Math.max(playerList.getItems().size(), roleList.getItems().size());
+                double temp = Math.abs(playerList.getItems().size() - roleList.getItems().size());
+                text += "(P:"+playerList.getItems().size()+" | R:"+roleList.getItems().size()+")";
                 stat += (0.3 * (1-(temp/max)));
                 confirmButton.setDisable(true);
             }
@@ -592,15 +619,16 @@ public class Controller implements Initializable {
         statusLabel.setText(text);
         dmProgress.setProgress(stat);
     }
-    private void listViewSetup(ListView<User> listView){
+    private void listViewSetup(ListView<Player> listView, boolean basic){
         listView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         listView.setOnDragDetected(event -> dragDetected(event, listView));
-        listView.setOnDragDropped(event -> dragDropped(event, listView));
         listView.setOnDragOver(event -> dragOver(event, listView));
-        listView.setOnDragDone(event -> dragDone(event, listView));
+        listView.setOnDragDropped(event -> dragDropped(event, listView, basic));
+        listView.setOnDragDone(event -> dragDone(event, listView, basic));
     }
+
     //--Drag And Drops--//
-    private void dragDetected(MouseEvent event, ListView<User> listView){
+    private void dragDetected(MouseEvent event, ListView<Player> listView){
         // Make sure at least one item is selected
         int selectedCount = listView.getSelectionModel().getSelectedIndices().size();
 
@@ -610,9 +638,9 @@ public class Controller implements Initializable {
         }
 
         // Initiate a drag-and-drop gesture
-        Dragboard dragboard = listView.startDragAndDrop(TransferMode.MOVE);
+        Dragboard dragboard = listView.startDragAndDrop(TransferMode.COPY_OR_MOVE);
         // Put the the selected items to the drag board
-        ArrayList<User> selectedItems = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
+        ArrayList<Player> selectedItems = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
 
         ClipboardContent content = new ClipboardContent();
         content.put(USER_LIST, selectedItems);
@@ -620,163 +648,124 @@ public class Controller implements Initializable {
         dragboard.setContent(content);
         event.consume();
     }
-    private void dragOver(DragEvent event, ListView<User> listView){
+    private void dragOver(DragEvent event, ListView<Player> listView){
         Dragboard dragboard = event.getDragboard();
         if (event.getGestureSource() != listView && dragboard.hasContent(USER_LIST)) event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
         event.consume();
     }
-    private void dragDropped(DragEvent event, ListView<User> listView){
+    @SuppressWarnings("unchecked")
+    private void dragDropped(DragEvent event, ListView<Player> listView, boolean basic){
         boolean dragCompleted = false;
         // Transfer the data to the target
         Dragboard dragboard = event.getDragboard();
         if(dragboard.hasContent(USER_LIST)) {
-            ArrayList<User> list = (ArrayList<User>)dragboard.getContent(USER_LIST);
-            listView.getItems().addAll(list);
+            ArrayList<Player> list = (ArrayList<Player>)dragboard.getContent(USER_LIST);
+            if(basic){
+                listView.getItems().addAll(list);
+                listView.getItems().sort(Comparator.comparing(t -> t.getPreferredName().toLowerCase()));
+            }
+            else userList.addAll(list);
             // Data transfer is successful
             dragCompleted = true;
         }
-        // Data transfer is not successful
-        listView.getItems().sort(Comparator.comparing(t -> t.getEffectiveName().toLowerCase()));
+        // Data transfer is not successful (DON'T SORT LIST VIEW HERE YOU BITCH)
         event.setDropCompleted(dragCompleted);
         event.consume();
     }
-    private void dragDone(DragEvent event, ListView<User> listView){
+    private void dragDone(DragEvent event, ListView<Player> listView, boolean basic){
         TransferMode tm = event.getTransferMode();
         if (tm == TransferMode.MOVE) {
-            // Get all selected Fruits in a separate list to avoid the shared list issue
-            List<User> selectedList = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
+            // Get all selected items in a separate list to avoid the shared list issue
+            List<Player> selectedList = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
             // Clear the selection
             listView.getSelectionModel().clearSelection();
             // Remove items from the selected list
-            listView.getItems().removeAll(selectedList);
+            if(basic) listView.getItems().removeAll(selectedList);
+            else userList.removeAll(selectedList);
         }
         statusUpdate();
         event.consume();
     }
 
     //==Menu Bar==//
-    private void getGithub(boolean silent){
-        try{
-            HttpURLConnection httpCon = (HttpURLConnection) new URL("https://api.github.com/repos/"+SelfCredentials.GITHUB_REPO+"/releases/latest").openConnection();
-            httpCon.addRequestProperty("User-Agent", "Mozilla/5.0");
-            BufferedReader in = new BufferedReader(new InputStreamReader(httpCon.getInputStream()));
-            StringBuilder responseSB = new StringBuilder(), sb = new StringBuilder();
-            String line;
-            while ((line = in.readLine()) != null) responseSB.append("\n").append(line);
-            in.close();
-            Arrays.stream(responseSB.toString().split("\"tag_name\":")).skip(1).map(l -> l.split(",")[0]).forEach(sb::append);
-            String version = sb.toString().split("\"")[1];
-            if(!version.equals(SelfCredentials.VERSION))alertNewUpdate(version, silent);
-            else if(!silent) alertNoUpdate();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
     public void getAbout(){
-        openLink("/blob/master/README.md#about");
+        SimpleFunctions.openGithubLink("/blob/master/README.md#about");
     }
     public void getHelp(){
-        openLink("/blob/master/README.md#how-do-i-use-this-program");
-    }
-    private void alertNewUpdate(String version, boolean startup){
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Check for Updates");
-        alert.setHeaderText("A new version (v"+version+") of the program is available for download on Github");
-        alert.setContentText("Would you like to Update?");
-        Optional<ButtonType> result = alert.showAndWait();
-        if (result.isPresent() && result.get() == ButtonType.OK) {
-            openLink("/releases/latest");
-            if (startup) System.exit(0);
-        }
-    }
-    private void alertNoUpdate(){
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Check for Updates");
-        alert.setHeaderText("Your version is up to date!");
-        alert.showAndWait();
-    }
-    private void openLink(String url){
-        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-        if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
-            try {
-                desktop.browse(new URI("https://github.com/"+SelfCredentials.GITHUB_REPO+url));
-            } catch (IOException | URISyntaxException e) {
-                e.printStackTrace();
-            }
-        }
+        SimpleFunctions.openGithubLink("/blob/master/README.md#how-do-i-use-this-program");
     }
 
     //==Helpers==//
-    private static List<Object> addPlayer(User s){
-        return Arrays.asList(
-                s.getID(), s.getName(), s.getEffectiveName(),
-                "=SUM(INDIRECT(\"RC[1]\", FALSE),INDIRECT(\"RC[2]\", FALSE))",
-                "=SUM(INDIRECT(\"RC[6]\", FALSE):INDIRECT(\"RC[11]\", FALSE))",
-                s.getLosses(), s.getKills(), s.getPerformance(), s.getLeft(),
-                "",
-                s.getSingleWin(0), s.getSingleWin(1), s.getSingleWin(2),
-                s.getSingleWin(3), s.getSingleWin(4), s.getSingleWin(5)
-        );
+    private void sendDM(Player p, String message){
+        Objects.requireNonNull(mainGuild.getMemberById(p.getID())).getUser().openPrivateChannel().queue(ch -> ch.sendMessage(message).queue());
     }
-    private ArrayList<Role> freshCopy(){
-        ArrayList<Role> ret = new ArrayList<>();
-        for(Role r: ROLES) ret.add(new Role(r));
-        return ret;
-    }
-    private ArrayList<Role> getSubArray(String type, ArrayList<Role> list, boolean allBut){
-        int first = -1, last = -1;
-        for(int x = 0; x < list.size(); x++){
-            if(!list.get(x).getType().equals(type) && !allBut) continue;
-            if(list.get(x).getType().equals(type) && allBut) continue;
-            if(first == -1) first = x;
-            last = x;
+    private void updateUser(Player p){
+        //FIXME The updated user isn't displayed instantly once the update is sent
+        Member m = mainGuild.getMemberById(p.getID());
+        if(m == null) return;
+        int x = 2;
+        for(List<Object> row: Spreadsheet.getInstance().getRange(Settings.getInst().getPlayerRange())){
+            if(row.get(0).toString().equals(p.getID())){
+                String name = m.getUser().getName();
+                if(!row.get(1).toString().equals(name)){
+                    row.set(1,name);
+                    Spreadsheet.getInstance().updateSingleEntry("Players!A"+x+":P", Collections.singletonList(row));
+                    p.setName(name);
+                }
+                break;
+            }
+            x++;
         }
-        if(first == -1) return null;
-        return new ArrayList<>(list.subList(first, last+1));
     }
-    private boolean fieldHasDigits(TextField field){
-        return field.getText().matches("[0-9]+");
-    }
-    private void addRole(ArrayList<Role> roles, ArrayList<Role> temp, Role role){
-        temp.remove(role);
-        roles.add(role);
-    }
-    private void sendDM(String ID, String message){
-        Objects.requireNonNull(Objects.requireNonNull(jda.getGuildById(sc.getGuildID())).getMemberById(ID)).getUser().openPrivateChannel().queue((ch) -> ch.sendMessage(message).queue());
-    }
-    private void buildList(String range){
-        try {
-            List<List<Object>> sheetVals = service.spreadsheets().values().get(sc.getSheetID(), range).execute().getValues();
-            if (sheetVals != null && !sheetVals.isEmpty()) {
-                for (List row: sheetVals) {
-                    if(!row.isEmpty()) {
-                        if(range.equals(sc.getRolesRange())) {
-                            ROLES.add(new Role(row));
-                            if(!RESOURCES.contains(row.get(0).toString())) RESOURCES.add(row.get(0).toString());
-                        }
-                        else if(range.equals(sc.getPlayerRange())) USERS.add(new User(row));
-                        else if(range.equals(sc.getTagsRange())) TAGS.add(new Tag(row));
-                        else if(range.equals(sc.getGameModeRange())) GAME_MODES.add(new GameMode(row));
+    private static void buildList(String range, String prompt){
+        LOGGER.info("Loading {}", prompt);
+        List<List<Object>> sheetVals = Spreadsheet.getInstance().getRange(range);
+        if (!sheetVals.isEmpty()) {
+            for (List<Object> row: sheetVals) {
+                if(!row.isEmpty()) {
+                    if(range.equals(Settings.getInst().getRolesRange())) {
+                        String type = row.get(0).toString();
+                        ROLES.putIfAbsent(type, new ArrayList<>());
+                        ROLES.get(type).add(new Role(row));
                     }
+                    else if(range.equals(Settings.getInst().getTagsRange())) TAGS.add(new Tag(row));
+                    else if(range.equals(Settings.getInst().getGameModeRange())) GAME_MODES.add(new GameMode(row));
+                    else if(range.equals(Settings.getInst().getPlayerRange())) userList.add(new Player(row));
+                    else if(range.equals(Settings.getInst().getLoginRange())) LoginUtil.getInst().addUserToMaps(row);
                 }
             }
-        } catch (IOException e){
-            e.printStackTrace();
+        }
+        //Add an ALL category and ignore Beta
+        if(range.equals(Settings.getInst().getRolesRange())){
+            ArrayList<Role> all = new ArrayList<>();
+            for (String key: ROLES.keySet()){
+                if(key.equalsIgnoreCase("Beta")) continue;
+                all.addAll(ROLES.get(key));
+            }
+            all.sort(Comparator.comparing(Role::getName));
+            ROLES.put("All", all);
         }
     }
     private void buildButtons(String type, FlowPane append, int...data){
         for(int d: data){
             Button but = new Button(""+d);
-            if(type.equals("RNG")) {
-                but.setFont(Font.font("System", FontWeight.BOLD, 42));
-                but.setOnMousePressed(event -> preRNG(d));
+            switch (type){
+                case "RNG":{
+                    but.setFont(Font.font("System", FontWeight.BOLD, 42));
+                    but.setOnMousePressed(event -> rollLabel.setText(SimpleFunctions.rollTheDice(d)));
+                    break;
+                }
+                case "TIME":{
+                    but.setText(but.getText()+((d == 1)?(" Minute"):(" Minutes")));
+                    but.setFont(Font.font("System", FontWeight.BOLD, 25));
+                    but.setOnMousePressed(event -> startTimer(SimpleFunctions.getTimeInSeconds(d)));
+                    break;
+                }
+                default:{
+                    LOGGER.error("Action Not Applied to Button Building!");
+                    break;
+                }
             }
-            else if(type.equals("TIME")) {
-                but.setText(but.getText()+((d == 1)?(" Minute"):(" Minutes")));
-                but.setFont(Font.font("System", FontWeight.BOLD, 25));
-                but.setOnMousePressed(event -> startTimer(time(d)));
-            }
-            else System.out.println("Action Not Applied");
             append.getChildren().add(but);
         }
     }

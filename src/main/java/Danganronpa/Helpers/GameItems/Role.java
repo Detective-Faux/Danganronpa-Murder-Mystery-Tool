@@ -3,18 +3,19 @@ package Danganronpa.Helpers.GameItems;
 import java.util.List;
 
 public class Role {
-    private String type, name, description;
+    private final String type, name, proxy, description;
 
-    public Role(String type, String name, String description){
+    public Role(String type, String name, String proxy, String description){
         this.type = type;
         this.name = name;
+        this.proxy = proxy;
         this.description = description;
     }
     public Role(Role role){
-        this(role.getType(), role.getName(), role.getDescription());
+        this(role.getType(), role.getName(), role.getProxy(), role.getDescription());
     }
-    public Role(List row){
-        this(row.get(0).toString(), row.get(1).toString(), row.get(2).toString());
+    public Role(List<Object> row){
+        this(row.get(0).toString(), row.get(1).toString(), row.get(2).toString(), row.get(3).toString());
     }
 
     public String getName() {
@@ -25,6 +26,9 @@ public class Role {
     }
     public String getDescription() {
         return description;
+    }
+    public String getProxy(){
+        return proxy;
     }
 
     @Override

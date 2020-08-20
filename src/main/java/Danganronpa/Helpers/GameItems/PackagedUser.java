@@ -1,68 +1,23 @@
 package Danganronpa.Helpers.GameItems;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 public class PackagedUser {
-    private User user;
-    private Role role;
-    private ArrayList<Tag> tags;
+    private final Player user;
+    private final SuperRole superRole;
 
-    public PackagedUser(User user, Role role, ArrayList<Tag> tags) {
+    public PackagedUser(Player user, SuperRole superRole){
         this.user = user;
-        this.role = role;
-        this.tags = tags;
-    }
-    public PackagedUser(Role role){
-        this(null, role, new ArrayList<>());
-    }
-    public PackagedUser(Role role, Tag...tags){
-        this(null, role, new ArrayList<>(Arrays.asList(tags)));
-    }
-    public PackagedUser(){
-        this(null, null, new ArrayList<>());
+        this.superRole = superRole;
     }
 
-    public User getUser() {
+    public Player getUser() {
         return user;
     }
-    public String getID(){
-        return user.getID();
-    }
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public Role getRole() {
-        return role;
-    }
-    public void setRole(Role role) {
-        this.role = role;
-    }
-
-    public ArrayList<Tag> getTags() {
-        return tags;
-    }
-    public String getTagsAsString() {
-        StringBuilder sb = new StringBuilder();
-        for(Tag t: tags) sb.append(t.toString());
-        return (sb.toString().equals(""))?(""):(sb.append(": ").toString());
-    }
-    public String getFullTagsAsString() {
-        StringBuilder sb = new StringBuilder();
-        for(Tag t: tags) sb.append(t.getName()).append(" ");
-        return sb.toString();
-    }
-    public void setTags(ArrayList<Tag> tags) {
-        this.tags = tags;
-    }
-    public void addTag(Tag tag){
-        if(!tags.isEmpty()) tags.clear();
-        this.tags.add(tag);
+    public SuperRole getSuperRole() {
+        return superRole;
     }
 
     @Override
     public String toString() {
-        return ""+ getUser()+": "+getTagsAsString()+getRole();
+        return ""+ getUser()+": "+getSuperRole();
     }
 }

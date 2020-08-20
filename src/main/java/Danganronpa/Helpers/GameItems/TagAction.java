@@ -2,15 +2,20 @@ package Danganronpa.Helpers.GameItems;
 
 class TagAction {
     enum ActionType{
-        NONE,
-        EMPTY,
-        QUARTER,
-        HALF,
-        ALL
+        NONE(-1),
+        EMPTY(0),
+        QUARTER(4),
+        HALF(2),
+        ALL(1);
+
+        public int multiplier;
+        ActionType(int multiplier){
+            this.multiplier = multiplier;
+        }
     }
 
-    private ActionType action;
-    private int id;
+    private final ActionType action;
+    private final int id;
 
     TagAction(String action){
         if(action.contains(":")){

@@ -37,14 +37,14 @@ Here's an example of how you should format you new spreadsheet:
 https://docs.google.com/spreadsheets/d/1QyhbDICpzsgfMZGyjWeL8AcxVOp5e_geoT-70gmRPKY/edit?usp=sharing
 
 Once you have your spreadsheet ready to be used, you'll need its ID. 
-This can be found between the **spreadsheets/d/** and the **/edit** parts of your spreadsheet's URL
+This can be found between the **spreadsheets/d/** and the **/edit** parts of your spreadsheet's URL.
 
 ### Discord Items
 
 Next, let's talk about using a Discord Bot.
 If you would like to use your own bot for your server, you'll need to go to
 [Discord's developer portal](https://discordapp.com/developers/applications/)  
-Create yourself a new application, make it a discord bot, and copy down your new bot's **Discord Token**.  
+Create yourself a new application, make it a discord bot, and copy down the **Discord Token**.  
 Now would also be a good time to connect your new bot to your discord account if you haven't done so already.  
 To do so, edit the following link to your desire: 
 
@@ -66,7 +66,7 @@ Your first time running the program you may see something like this:
 
 ![alert](https://i.imgur.com/iwrD9Mz.png)
 
-You'll need to enter in the information we gathered earlier into these field before you can run the program.
+You'll need to enter the information we gathered earlier into these field before you can run the program.
 
 ### Roles
 
@@ -100,7 +100,7 @@ use the up arrow on after selecting a user to move them to the **Moderators** fi
 
 ![Sync](https://i.imgur.com/UTgudUu.png)
 
-Once everything is setup, click the **Send Roles** button at the bottom,
+Once everything's set up correctly, click the **Send Roles** button at the bottom,
 and everyone you have selected in your lists should receive a discord message with their role,
 and moderators should get a quick list of who all has what role/tag.
 
@@ -117,12 +117,6 @@ There's a simple Dice roller, and a simple Countdown Timer for the needs of the 
 
 ![Countdown](https://i.imgur.com/TroSEfJ.png)
 
-The other more notable feature is the **Score Updater** tab.
-This tab is just a quick way to update the scores of each user that's playing the current round.  
-To update a user's info, click the user you want to update, click the **Use Selected User** button,
-edit the values, and when you're done click the **Update Info** button.
-
-![Score Updater](https://i.imgur.com/OhI2LBg.png)
 
 ## Thank You <3
 
@@ -131,4 +125,4 @@ I want to thank those for inspiring me to go through with this project,
 and I want to thank the people who decide to use it.
 It means a lot that my work is getting used for things like this,
 so from the bottom of my heart,
-thank you for your support and I hope you enjoy as I continue development! 
+thank you for your support, and I hope you enjoy as I continue development! 
