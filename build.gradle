@@ -11,31 +11,26 @@ targetCompatibility = 1.8
 repositories {
     mavenCentral()
     jcenter()
-    maven{
-        url 'http://repository.codehaus.org/'
+    maven {
+        name 'm2-dv8tion'
+        url 'https://m2.dv8tion.net/releases'
     }
 }
 
-ext.logbackVersion = '1.2.3'
+ext.logbackVersion = '1.2.5'
 
 dependencies {
-    compile ('net.dv8tion:JDA:4.2.0_183'){
+    compile ('net.dv8tion:JDA:4.3.0_305'){
         exclude module: 'opus-java'
     }
-    compile 'com.jagrosh:jda-utilities-command:3.0.4'
+    compile 'com.jagrosh:jda-utilities-command:3.0.5'
     
     compile 'com.google.api-client:google-api-client:1.23.0'
     compile 'com.google.oauth-client:google-oauth-client-jetty:1.23.0'
     compile 'com.google.apis:google-api-services-sheets:v4-rev516-1.23.0'
-    
-    compile "com.google.code.gson:gson:2.4"
-    compile "org.xerial:sqlite-jdbc:3.8.11.2"
-    compile "org.pircbotx:pircbotx:2.0.1"
-    compile "commons-io:commons-io:2.4"
 
-    compile group: 'org.apache.poi', name: 'poi', version:"4.1.0"
-    compile 'org.apache.httpcomponents:httpclient:4.5.8'
-    compile 'commons-codec:commons-codec:1.14'
+    compile 'org.pircbotx:pircbotx:2.1'
+    compile 'org.apache.poi:poi:5.0.0'
 
     runtime "ch.qos.logback:logback-classic:$logbackVersion"
     runtime "ch.qos.logback:logback-core:$logbackVersion"

@@ -1,17 +1,12 @@
 package Danganronpa;
 
-import Danganronpa.Helpers.Discord.Capsule;
+import Danganronpa.Helpers.Discord.DiscordHandler;
 import Danganronpa.Helpers.GameItems.*;
-import Danganronpa.Helpers.Other.LoginUtil;
-import Danganronpa.Helpers.Other.Settings;
-import Danganronpa.Helpers.Other.SimpleFunctions;
-import Danganronpa.Helpers.Other.Spreadsheet;
+import Danganronpa.Helpers.Other.*;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
 import javafx.fxml.Initializable;
@@ -19,13 +14,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.control.Button;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.Label;
-import javafx.scene.control.Menu;
-import javafx.scene.control.MenuItem;
-import javafx.scene.control.TextField;
-import javafx.scene.image.Image;
 import javafx.scene.input.*;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
@@ -38,12 +26,6 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import javafx.util.Pair;
-import net.dv8tion.jda.api.JDABuilder;
-import net.dv8tion.jda.api.entities.Activity;
-import net.dv8tion.jda.api.entities.Guild;
-import net.dv8tion.jda.api.entities.Member;
-import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.MemberCachePolicy;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
@@ -55,7 +37,6 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -63,14 +44,7 @@ import java.util.List;
 
 public class Controller implements Initializable {
     //==Global Items==//
-    public static final ArrayList<Tag> TAGS = new ArrayList<>();
-    private static final ArrayList<GameMode> GAME_MODES = new ArrayList<>();
-    private static final HashMap<String, ArrayList<Role>> ROLES = new HashMap<>();
-    private static final DataFormat USER_LIST = new DataFormat("UserList");
     private static final Logger LOGGER = LoggerFactory.getLogger(Controller.class);
-    private static final ObservableList<Player> userList = FXCollections.observableArrayList();
-    //private static JDA jda;
-    private static Guild mainGuild;
     private final ArrayList<TextField> customGameField = new ArrayList<>();
     private final ArrayList<SuperRole> superRoles = new ArrayList<>();
     private Timeline timer = new Timeline();
@@ -104,7 +78,7 @@ public class Controller implements Initializable {
             //==Main Settings==//
             LOGGER.info("Checking for 'config.properties' file");
             File f = new File("./config.properties");
-            if(f.createNewFile()){
+            if(f.createNewFile()) {
                 LOGGER.warn("Couldn't find the `config.properties` file... New file will be created.");
                 for(int x = 0; x < Settings.FIELDS.length; x++) Settings.getInst().getConfig().setProperty(Settings.FIELDS[x], "");
                 while (Settings.getInst().getConfig().getProperty(Settings.FIELDS[0],"").equals("")) quarryInfoAlert();
@@ -125,7 +99,7 @@ public class Controller implements Initializable {
 
             //==Sheet Settings==//
             LOGGER.info("Accessing Settings");
-            List<List<Object>> sheetVals = Spreadsheet.getInstance().getRange(Settings.getInst().getSettingsRange(),"COLUMNS");
+            List<List<Object>> sheetVals = SpreadsheetHandler.getInstance().getRange(Settings.getInst().getSettingsRange(),"COLUMNS");
             if(sheetVals.isEmpty()) {
                 LOGGER.error("No Spreadsheet Settings Found!");
                 System.exit(0);
@@ -134,7 +108,7 @@ public class Controller implements Initializable {
 
             //==User Login==//
             LOGGER.info("Accessing Login Information");
-            buildList(Settings.getInst().getLoginRange(), "Hosts");
+            SpreadsheetHandler.buildList(Settings.getInst().getLoginRange());
             while (true) {
                 if(Settings.getInst().getUsername().equals("") || Settings.getInst().getPassword().equals("")) {
                     login();
@@ -151,7 +125,7 @@ public class Controller implements Initializable {
                 //Register User Otherwise
                 else {
                     LoginUtil.getInst().registerUser(Settings.getInst().getUsername(), Settings.getInst().getPassword());
-                    Spreadsheet.getInstance().appendSpreadsheet("Login",Collections.singletonList(LoginUtil.getInst().getUserAsList(Settings.getInst().getUsername())));
+                    SpreadsheetHandler.getInstance().appendSpreadsheet(Settings.getInst().getLoginRange(),Collections.singletonList(LoginUtil.getInst().getUserAsList(Settings.getInst().getUsername())));
                     LOGGER.info("New Login Created; Awaiting Approval!");
                     break;
                 }
@@ -165,27 +139,22 @@ public class Controller implements Initializable {
             }
 
             //==List Building==//
-            buildList(Settings.getInst().getRolesRange(),"Roles");
-            buildList(Settings.getInst().getTagsRange(),"Tags");
-            buildList(Settings.getInst().getGameModeRange(),"Game Modes");
+            SpreadsheetHandler.buildList(Settings.getInst().getRolesRange());
+            SpreadsheetHandler.buildList(Settings.getInst().getTagsRange());
+            SpreadsheetHandler.buildList(Settings.getInst().getGameModeRange());
 
-            //==Discord Setup==// (Updated for JDA 4.2.0)
-            LOGGER.info("Booting Discord...");
-            JDABuilder.createDefault(Settings.getInst().getDiscordToken(), GatewayIntent.GUILD_MEMBERS, GatewayIntent.GUILD_MESSAGES,
-                    GatewayIntent.GUILD_VOICE_STATES, GatewayIntent.GUILD_EMOJIS, GatewayIntent.GUILD_BANS, GatewayIntent.GUILD_INVITES,
-                    GatewayIntent.GUILD_MESSAGE_REACTIONS, GatewayIntent.DIRECT_MESSAGE_REACTIONS, GatewayIntent.DIRECT_MESSAGES)
-            .setBulkDeleteSplittingEnabled(false).setAutoReconnect(true).addEventListeners(new Capsule())
-            .setMemberCachePolicy(MemberCachePolicy.ALL).setActivity(Activity.watching("over "+ Settings.getInst().getUsername()+"'s class..."))
-            .build();
+            //==Discord Setup==//
+            DiscordHandler.buildDiscordInstance();
+
             //==Audio==//
-            gong = new Media(Main.class.getResource("/Media/timer.wav").toURI().toString());
-        } catch (GeneralSecurityException | IOException | URISyntaxException e) {
+            gong = new Media(Objects.requireNonNull(Main.class.getResource("/Media/timer.wav")).toURI().toString());
+        } catch (IOException | URISyntaxException e) {
             LOGGER.error("Exception in 'Initialize' Method");
         }
 
         //==Other Initialisations==//
-        gamemodeBox.getItems().addAll(GAME_MODES);
-        FilteredList<Player> filteredUserList = new FilteredList<>(userList, s -> true);
+        gamemodeBox.getItems().addAll(SpreadsheetHandler.GAME_MODES);
+        FilteredList<Player> filteredUserList = new FilteredList<>(SpreadsheetHandler.USER_LIST, s -> true);
         SortedList<Player> sortedUserList = new SortedList<>(filteredUserList, Comparator.comparing(t -> t.getPreferredName().toLowerCase()));
         displayedUserList.setItems(sortedUserList);
         listViewSetup(displayedUserList, false);
@@ -195,14 +164,14 @@ public class Controller implements Initializable {
         userSearchField.textProperty().addListener((observable, oldVal, newVal) -> filteredUserList.setPredicate(i -> {
             //Zero case
             if (newVal == null || newVal.isEmpty()) return true;
-            //Test Cases (separate as more if's if needed)
+            //Test Cases (separate as more if statements are needed)
             if (i.getName().toUpperCase().contains(newVal.toUpperCase())) return true;
             return i.getPreferredName().toUpperCase().contains(newVal.toUpperCase());
         }));
 
         //==Dynamic Game Fields & Role Menus==//
         LOGGER.info("Adding Custom Fields and Updating Menus");
-        Object[] cate = ROLES.keySet().toArray();
+        Object[] cate = SpreadsheetHandler.ROLES.keySet().toArray();
         Arrays.sort(cate);
         for(Object item: cate){
             //Custom game Fields
@@ -216,7 +185,7 @@ public class Controller implements Initializable {
             //Role Menus
             Menu add = new Menu(item.toString());
             add.setMnemonicParsing(false);
-            ArrayList<Role> roles = ROLES.get(item.toString());
+            ArrayList<Role> roles = SpreadsheetHandler.ROLES.get(item.toString());
             for(int x = 0; x < roles.size(); x++){
                 int cur = x;
                 MenuItem role = new MenuItem(roles.get(x).toString());
@@ -228,7 +197,7 @@ public class Controller implements Initializable {
         }
 
         //==Tag Menu==//
-        for(Tag item: TAGS){
+        for(Tag item: SpreadsheetHandler.TAGS){
             MenuItem add = new MenuItem(item.toString());
             add.setOnAction(event -> menuAddTag(item));
             tagMenu.getItems().add(add);
@@ -247,12 +216,6 @@ public class Controller implements Initializable {
         statusUpdate();
         LOGGER.info("Waiting for Discord Connection...");
     }
-    public static void afterDiscordStartup(Guild guild) {
-        mainGuild = guild;
-        buildList(Settings.getInst().getPlayerRange(), "Players");
-        checkNewUsers();
-        LOGGER.info("Finished Initialization");
-    }
     private void quarryInfoAlert() {
         // Create the custom dialog.
         Dialog<String> dialog = new Dialog<>();
@@ -261,7 +224,7 @@ public class Controller implements Initializable {
         dialog.initModality(Modality.APPLICATION_MODAL);
 
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        stage.getIcons().add(new Image(this.getClass().getResource("/Media/logo.png").toString()));
+        stage.getIcons().add(Settings.getInst().getLogo());
 
         // Set the button types.
         ButtonType loginButtonType = new ButtonType("Confirm", ButtonBar.ButtonData.OK_DONE);
@@ -299,7 +262,7 @@ public class Controller implements Initializable {
         dialog.initModality(Modality.APPLICATION_MODAL);
 
         Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
-        stage.getIcons().add(new Image(this.getClass().getResource("/Media/logo.png").toString()));
+        stage.getIcons().add(Settings.getInst().getLogo());
 
         // Set the button types.
         ButtonType loginButtonType = new ButtonType("Login", ButtonBar.ButtonData.OK_DONE),
@@ -322,16 +285,38 @@ public class Controller implements Initializable {
         Node loginButton = dialog.getDialogPane().lookupButton(loginButtonType),
              registerButton = dialog.getDialogPane().lookupButton(registerButtonType);
         boolean toggle = LoginUtil.getInst().isUsernameTaken(username.getText());
-        loginButton.setDisable(!toggle); registerButton.setDisable(toggle);
+        loginButton.setDisable(!toggle || username.getText().equals("")); registerButton.setDisable(toggle || username.getText().equals(""));
 
         // Do some validation (using the Java 8 lambda syntax).
         username.textProperty().addListener((observable, oldValue, newValue) -> {
-            if(LoginUtil.getInst().isUsernameTaken(newValue)){
-                registerButton.setDisable(true);
-                loginButton.setDisable(false);
+            if(!password.getText().isEmpty() && !newValue.isEmpty()){
+                if(LoginUtil.getInst().isUsernameTaken(newValue)){
+                    registerButton.setDisable(true);
+                    loginButton.setDisable(false);
+                }
+                else {
+                    registerButton.setDisable(false);
+                    loginButton.setDisable(true);
+                }
             }
-            else {
-                registerButton.setDisable(oldValue.trim().isEmpty() || newValue.trim().isEmpty());
+            else{
+                registerButton.setDisable(true);
+                loginButton.setDisable(true);
+            }
+        });
+        password.textProperty().addListener((observable, oldValue, newValue) -> {
+            if(!username.getText().isEmpty() && !newValue.isEmpty()){
+                if(LoginUtil.getInst().isUsernameTaken(username.getText())){
+                    registerButton.setDisable(true);
+                    loginButton.setDisable(false);
+                }
+                else {
+                    registerButton.setDisable(false);
+                    loginButton.setDisable(true);
+                }
+            }
+            else{
+                registerButton.setDisable(true);
                 loginButton.setDisable(true);
             }
         });
@@ -348,36 +333,6 @@ public class Controller implements Initializable {
         });
     }
 
-    //==Update Spreadsheet==//
-    public static void update(Member m){
-        Player s = new Player(m);
-        for(Player plr : userList) if(plr.getID().equals(s.getID())) return;
-        userList.add(s);
-        Spreadsheet.getInstance().appendSpreadsheet("Players", Collections.singletonList(s.getPlayerSheetVariable()));
-        LOGGER.info("A new user joined just joined the server! They have been added to the user list!");
-    }
-    public static void checkNewUsers(){
-        boolean found;
-        ArrayList<Player> temp = new ArrayList<>();
-        for(Member m: mainGuild.getMembers()){
-            found = false;
-            if(m.getUser().isBot()) continue;
-            for(Player s: userList) {
-                if(s.getID().equals(m.getId())) {
-                    found = true;
-                    break;
-                }
-            }
-            if(!found) temp.add(new Player(m));
-        }
-        if(temp.isEmpty()) return;
-        userList.addAll(temp);
-        List<List<Object>> toAppend = new ArrayList<>();
-        for(Player s: temp) toAppend.add(s.getPlayerSheetVariable());
-        Spreadsheet.getInstance().appendSpreadsheet("Players", toAppend);
-        LOGGER.info("{} new users have been added to the user list!", toAppend.size());
-    }
-
     //==Game Stuff==//
     public void startGame(){
         StringBuilder fileOut = new StringBuilder();
@@ -387,17 +342,17 @@ public class Controller implements Initializable {
         ArrayList<PackagedUser> packagedUsers = new ArrayList<>();
         for(int x = 0; x < playing.size(); x++) packagedUsers.add(new PackagedUser(playing.get(x), superRoles.get(x)));
         for(PackagedUser s: packagedUsers){
-            sendDM(s.getUser(),"**"+Settings.getInst().getRoleTitlePrefix()+" "+s.getSuperRole().getRole()+"**:\n"+s.getSuperRole().getRole().getDescription());
+            DiscordHandler.sendDM(s.getUser(),"**"+Settings.getInst().getRoleTitlePrefix()+" "+s.getSuperRole().getRole()+"**:\n"+s.getSuperRole().getRole().getDescription());
             for(Tag t: s.getSuperRole().getTags()) {
-                if(!t.isEmpty()) sendDM(s.getUser(),"**"+t.getName()+"**:\n"+t.getDescription());
+                if(!t.isEmpty()) DiscordHandler.sendDM(s.getUser(),"**"+t.getName()+"**:\n"+t.getDescription());
             }
-            sendDM(s.getUser(),Settings.getInst().getExtraMessage());
-            fileOut.append(s.toString()).append("\r\n");
-            updateUser(s.getUser());
+            DiscordHandler.sendDM(s.getUser(),Settings.getInst().getExtraMessage());
+            fileOut.append(s).append("\r\n");
+            DiscordHandler.updateUser(s.getUser());
         }
 
         //Sends selected mods the list of those playing with their roles
-        for(Player u: modsList.getItems()) sendDM(u, "```\n"+fileOut.toString()+"```");
+        for(Player u: modsList.getItems()) DiscordHandler.sendDM(u, "```\n"+ fileOut +"```");
 
         //generates file with all player's roles as backup
         try {
@@ -493,7 +448,7 @@ public class Controller implements Initializable {
         ArrayList<String> heir = new ArrayList<>();
         for (TextField curField : customGameField) {
             if (!SimpleFunctions.fieldHasDigits(curField)) continue;
-            ArrayList<Role> size = ROLES.get(curField.getPromptText().substring(2));
+            ArrayList<Role> size = SpreadsheetHandler.ROLES.get(curField.getPromptText().substring(2));
             if (size == null) continue;
             int len = Integer.parseInt(curField.getText());
             if (len > size.size()) {//if overflow
@@ -528,23 +483,22 @@ public class Controller implements Initializable {
         statusUpdate();
     }
     private void startGenerate(int len, ArrayList<String> hierarchy){
-        if(gamemodeBox.getValue() == null) gamemodeBox.setValue(GAME_MODES.get(0));
+        if(gamemodeBox.getValue() == null) gamemodeBox.setValue(SpreadsheetHandler.GAME_MODES.get(0));
         if(len < gamemodeBox.getValue().getCalculatedTagsSize(len)) return;
-        if(len > 0 && len <= ROLES.get("All").size()) generateGame(hierarchy, len, gamemodeBox.getValue().performActions(len));
+        if(len > 0 && len <= SpreadsheetHandler.ROLES.get("All").size()) generateGame(hierarchy, len, gamemodeBox.getValue().performActions(len));
     }
     private void generateGame(ArrayList<String> heir, int n, ArrayList<Tag> tags){
         superRoles.clear();
         ArrayList<Role> roleSelection = new ArrayList<>();
-        for(int ran, x = 0; x < n; x++) {
+        for(int x = 0; x < n; x++) {
             String type = heir.get(x%heir.size()); //Loop through hierarchy order.
-            if(ROLES.get(type) == null) {
+            if(SpreadsheetHandler.ROLES.get(type) == null) {
                 LOGGER.error("Error in Role Types. Is the hierarchy up to date?");
                 return;
             }
-            ArrayList<Role> sub = ROLES.get(type);
+            ArrayList<Role> sub = SpreadsheetHandler.ROLES.get(type);
             //Pick Random role from category
-            ran = (int)(Math.random()*sub.size());
-            roleSelection.add(sub.get(ran));
+            roleSelection.add(sub.get((int)(Math.random()*sub.size())));
         }
         //Create Students
         Collections.shuffle(tags);
@@ -560,8 +514,6 @@ public class Controller implements Initializable {
     }
     private void menuAddRole(Role...roles){
         for(Role r: roles){
-            /*TreeItem<String> temp = makeBranch(r.toString(), roleTree.getRoot());
-            makeBranch(r.getDescription(),temp);*/
             SuperRole p = new SuperRole(r);
             superRoles.add(p);
             roleList.getItems().add(p.getTagsAsString()+p.getRole());
@@ -585,8 +537,8 @@ public class Controller implements Initializable {
     //==User Building==//
     public void clearCreated(){
         //Push back
-        userList.addAll(modsList.getItems());
-        userList.addAll(playerList.getItems());
+        SpreadsheetHandler.USER_LIST.addAll(modsList.getItems());
+        SpreadsheetHandler.USER_LIST.addAll(playerList.getItems());
         //Pop remaining
         playerList.getItems().clear();
         modsList.getItems().clear();
@@ -594,7 +546,7 @@ public class Controller implements Initializable {
         userSearchField.clear();
         statusUpdate();
     }
-    private void statusUpdate(){
+    public void statusUpdate(){
         double stat = 0;
         String text = "Status: ";
         if(roleList.getItems().isEmpty()) text += "(R?) ";
@@ -630,27 +582,16 @@ public class Controller implements Initializable {
     //--Drag And Drops--//
     private void dragDetected(MouseEvent event, ListView<Player> listView){
         // Make sure at least one item is selected
-        int selectedCount = listView.getSelectionModel().getSelectedIndices().size();
-
-        if (selectedCount == 0) {
-            event.consume();
-            return;
+        if (!listView.getSelectionModel().getSelectedIndices().isEmpty()) {
+            ClipboardContent content = new ClipboardContent();
+            content.put(SpreadsheetHandler.USER_FORMAT, new ArrayList<>(listView.getSelectionModel().getSelectedItems()));
+            listView.startDragAndDrop(TransferMode.COPY_OR_MOVE).setContent(content);
         }
-
-        // Initiate a drag-and-drop gesture
-        Dragboard dragboard = listView.startDragAndDrop(TransferMode.COPY_OR_MOVE);
-        // Put the the selected items to the drag board
-        ArrayList<Player> selectedItems = new ArrayList<>(listView.getSelectionModel().getSelectedItems());
-
-        ClipboardContent content = new ClipboardContent();
-        content.put(USER_LIST, selectedItems);
-
-        dragboard.setContent(content);
         event.consume();
     }
     private void dragOver(DragEvent event, ListView<Player> listView){
-        Dragboard dragboard = event.getDragboard();
-        if (event.getGestureSource() != listView && dragboard.hasContent(USER_LIST)) event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+        if (event.getGestureSource() != listView && event.getDragboard().hasContent(SpreadsheetHandler.USER_FORMAT))
+            event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
         event.consume();
     }
     @SuppressWarnings("unchecked")
@@ -658,17 +599,17 @@ public class Controller implements Initializable {
         boolean dragCompleted = false;
         // Transfer the data to the target
         Dragboard dragboard = event.getDragboard();
-        if(dragboard.hasContent(USER_LIST)) {
-            ArrayList<Player> list = (ArrayList<Player>)dragboard.getContent(USER_LIST);
+        if(dragboard.hasContent(SpreadsheetHandler.USER_FORMAT)) {
+            ArrayList<Player> list = (ArrayList<Player>)dragboard.getContent(SpreadsheetHandler.USER_FORMAT);
             if(basic){
                 listView.getItems().addAll(list);
                 listView.getItems().sort(Comparator.comparing(t -> t.getPreferredName().toLowerCase()));
             }
-            else userList.addAll(list);
+            else SpreadsheetHandler.USER_LIST.addAll(list);
             // Data transfer is successful
             dragCompleted = true;
         }
-        // Data transfer is not successful (DON'T SORT LIST VIEW HERE YOU BITCH)
+        // Data transfer is not successful (DON'T SORT LIST VIEW HERE!!!)
         event.setDropCompleted(dragCompleted);
         event.consume();
     }
@@ -681,7 +622,7 @@ public class Controller implements Initializable {
             listView.getSelectionModel().clearSelection();
             // Remove items from the selected list
             if(basic) listView.getItems().removeAll(selectedList);
-            else userList.removeAll(selectedList);
+            else SpreadsheetHandler.USER_LIST.removeAll(selectedList);
         }
         statusUpdate();
         event.consume();
@@ -696,56 +637,6 @@ public class Controller implements Initializable {
     }
 
     //==Helpers==//
-    private void sendDM(Player p, String message){
-        Objects.requireNonNull(mainGuild.getMemberById(p.getID())).getUser().openPrivateChannel().queue(ch -> ch.sendMessage(message).queue());
-    }
-    private void updateUser(Player p){
-        //FIXME The updated user isn't displayed instantly once the update is sent
-        Member m = mainGuild.getMemberById(p.getID());
-        if(m == null) return;
-        int x = 2;
-        for(List<Object> row: Spreadsheet.getInstance().getRange(Settings.getInst().getPlayerRange())){
-            if(row.get(0).toString().equals(p.getID())){
-                String name = m.getUser().getName();
-                if(!row.get(1).toString().equals(name)){
-                    row.set(1,name);
-                    Spreadsheet.getInstance().updateSingleEntry("Players!A"+x+":P", Collections.singletonList(row));
-                    p.setName(name);
-                }
-                break;
-            }
-            x++;
-        }
-    }
-    private static void buildList(String range, String prompt){
-        LOGGER.info("Loading {}", prompt);
-        List<List<Object>> sheetVals = Spreadsheet.getInstance().getRange(range);
-        if (!sheetVals.isEmpty()) {
-            for (List<Object> row: sheetVals) {
-                if(!row.isEmpty()) {
-                    if(range.equals(Settings.getInst().getRolesRange())) {
-                        String type = row.get(0).toString();
-                        ROLES.putIfAbsent(type, new ArrayList<>());
-                        ROLES.get(type).add(new Role(row));
-                    }
-                    else if(range.equals(Settings.getInst().getTagsRange())) TAGS.add(new Tag(row));
-                    else if(range.equals(Settings.getInst().getGameModeRange())) GAME_MODES.add(new GameMode(row));
-                    else if(range.equals(Settings.getInst().getPlayerRange())) userList.add(new Player(row));
-                    else if(range.equals(Settings.getInst().getLoginRange())) LoginUtil.getInst().addUserToMaps(row);
-                }
-            }
-        }
-        //Add an ALL category and ignore Beta
-        if(range.equals(Settings.getInst().getRolesRange())){
-            ArrayList<Role> all = new ArrayList<>();
-            for (String key: ROLES.keySet()){
-                if(key.equalsIgnoreCase("Beta")) continue;
-                all.addAll(ROLES.get(key));
-            }
-            all.sort(Comparator.comparing(Role::getName));
-            ROLES.put("All", all);
-        }
-    }
     private void buildButtons(String type, FlowPane append, int...data){
         for(int d: data){
             Button but = new Button(""+d);

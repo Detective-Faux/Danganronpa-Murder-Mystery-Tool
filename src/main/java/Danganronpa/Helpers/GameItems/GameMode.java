@@ -1,6 +1,6 @@
 package Danganronpa.Helpers.GameItems;
 
-import Danganronpa.Controller;
+import Danganronpa.Helpers.Other.SpreadsheetHandler;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,13 +9,13 @@ public class GameMode {
     private final ArrayList<TagAction> pseudoList;
     private final String name;
 
-    public GameMode(String name, ArrayList<Object> pseudoTags) {
+    public GameMode(String name, List<Object> pseudoTags) {
         this.name = name;
         this.pseudoList = new ArrayList<>();
         for(Object o: pseudoTags) this.pseudoList.add(new TagAction(o.toString()));
     }
     public GameMode(List<Object> row){
-        this(row.get(0).toString(), new ArrayList<>(row.subList(1,row.size())));
+        this(row.get(0).toString(), row.subList(1,row.size()));
     }
 
     public int getCalculatedTagsSize(int len){
@@ -35,7 +35,7 @@ public class GameMode {
             switch (ta.getAction()){
                 case EMPTY: break;
                 case NONE: {
-                    if(ta.hasID()) getAll.add(Controller.TAGS.get(ta.getId()));
+                    if(ta.hasID()) getAll.add(SpreadsheetHandler.TAGS.get(ta.getId()));
                     break;
                 }
                 default:{
@@ -49,8 +49,8 @@ public class GameMode {
     }
     private ArrayList<Tag> performance(TagAction ta, int amount){
         ArrayList<Tag> ret = new ArrayList<>();
-        if(ta.isBoth()) for(int x = 0; x < amount/ta.getAction().multiplier; x++) ret.add(Controller.TAGS.get(ta.getId()));
-        else for(int x = 0; x < Controller.TAGS.size()/ta.getAction().multiplier; x++) ret.add(Controller.TAGS.get(x));
+        if(ta.isBoth()) for(int x = 0; x < amount/ta.getAction().multiplier; x++) ret.add(SpreadsheetHandler.TAGS.get(ta.getId()));
+        else for(int x = 0; x < SpreadsheetHandler.TAGS.size()/ta.getAction().multiplier; x++) ret.add(SpreadsheetHandler.TAGS.get(x));
         return ret;
     }
 

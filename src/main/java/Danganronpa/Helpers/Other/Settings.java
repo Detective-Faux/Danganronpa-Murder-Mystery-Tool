@@ -3,14 +3,13 @@ package Danganronpa.Helpers.Other;
 import javafx.scene.image.Image;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Properties;
 
 public class Settings {
     public static final Settings instance = new Settings();
-    public static final String VERSION = "0.8";
-    public static final String GITHUB_REPO = "Shadow-Spade/Danganronpa-Murder-Mystery-Tool";
     public static final String[] FIELDS = new String[]{"sheetID","username","password"};
-    private final Image logo = new Image(this.getClass().getResource("/Media/logo.png").toString());
+    private final Image logo = new Image(Objects.requireNonNull(this.getClass().getResource("/Media/logo.png")).toString());
     private final Properties config;
     private String preferredGuild, discordToken, prefix, extraMessage, roleTitlePrefix;
     private String[] hierarchy;

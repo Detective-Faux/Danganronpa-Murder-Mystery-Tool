@@ -43,7 +43,7 @@ public final class SimpleFunctions {
 
     public static void getGithub(boolean silent){
         try{
-            HttpURLConnection httpCon = (HttpURLConnection) new URL("https://api.github.com/repos/"+ Settings.GITHUB_REPO+"/releases/latest").openConnection();
+            HttpURLConnection httpCon = (HttpURLConnection) new URL(BotInfo.API_LATEST).openConnection();
             httpCon.addRequestProperty("User-Agent", "Mozilla/5.0");
             BufferedReader in = new BufferedReader(new InputStreamReader(httpCon.getInputStream()));
             StringBuilder responseSB = new StringBuilder(), sb = new StringBuilder();
@@ -52,7 +52,7 @@ public final class SimpleFunctions {
             in.close();
             Arrays.stream(responseSB.toString().split("\"tag_name\":")).skip(1).map(l -> l.split(",")[0]).forEach(sb::append);
             String version = sb.toString().split("\"")[1];
-            if(!version.equals(Settings.VERSION)) {
+            if(!version.equals(BotInfo.VERSION)) {
                 Alert alert = createBasicAlert(Settings.getInst().getLogo(), Alert.AlertType.CONFIRMATION, "Check for Updates",
                         "A new version (v"+version+") of the program is available for download on Github",
                         "Would you like to Update?");
@@ -72,7 +72,7 @@ public final class SimpleFunctions {
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
             try {
-                desktop.browse(new URI("https://github.com/"+ Settings.GITHUB_REPO+url));
+                desktop.browse(new URI(BotInfo.GITHUB+url));
             } catch (IOException | URISyntaxException e) {
                 LOGGER.warn("Exception in 'OpenGithubLink' Method");
             }
